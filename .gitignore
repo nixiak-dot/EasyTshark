@@ -1,0 +1,42 @@
+# Visual Studio / MSBuild
+.vs/
+EasyTshark/
+x64/
+Debug/
+Release/
+*.user
+*.suo
+*.VC.db
+*.VC.VC.opendb
+*.ipch
+*.aps
+*.ncb
+*.opendb
+
+# Logs and runtime captures
+logs/
+pcap/
+*.log
+DvlErrLog.txt
+
+# Local databases and generated check data
+*.db
+*.db-shm
+*.db-wal
+.gcc-check/
+reasonix.toml
+
+# Frontend dependencies and generated output
+tshark-front/node_modules/
+tshark-front/build/
+tshark-front/dist/*
+!tshark-front/dist/
+!tshark-front/dist/*.exe
+tshark-front/src copy/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Third-party C/C++ dependencies are kept local for now.
+third_library/

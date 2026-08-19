@@ -1,0 +1,563 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\EasyTshark.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\IP2RegionUtil.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TsharkManager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TsharkDatabase.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Logger.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="third_library\ip2region\xdb_bench.cc">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="third_library\ip2region\xdb_search.cc">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="third_library\sqlite3\sqlite3.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PageHelper.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Controller\AdapterController.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Controller\BaseController.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Controller\PacketController.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Controller\SessionController.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Controller\StatsController.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\IP2RegionUtil.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ProcessUtil.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tshark_datatype.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TsharkManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Logger.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MiscUtil.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TsharkDatabase.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\QueryCondition.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PacketSQL.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SessionSQL.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PageHelper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\StatsSQL.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Controller\PacketController.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Controller\AdapterController.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Controller\SessionController.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Controller\BaseController.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Controller\StatsController.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\httplib\httplib.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\ip2region\xdb_bench.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\ip2region\xdb_search.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\error\en.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\error\error.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\internal\biginteger.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\internal\clzll.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\internal\diyfp.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\internal\dtoa.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\internal\ieee754.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\internal\itoa.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\internal\meta.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\internal\pow10.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\internal\regex.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\internal\stack.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\internal\strfunc.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\internal\strtod.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\internal\swap.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\msinttypes\inttypes.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\msinttypes\stdint.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\allocators.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\cursorstreamwrapper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\document.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\encodedstream.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\encodings.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\filereadstream.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\filewritestream.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\fwd.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\istreamwrapper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\memorybuffer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\memorystream.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\ostreamwrapper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\pointer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\prettywriter.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\rapidjson.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\reader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\schema.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\stream.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\stringbuffer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\uri.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\rapidjson\writer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\cfg\argv.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\cfg\env.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\cfg\helpers.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\cfg\helpers-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\backtracer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\backtracer-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\circular_q.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\console_globals.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\file_helper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\file_helper-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\fmt_helper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\log_msg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\log_msg_buffer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\log_msg_buffer-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\log_msg-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\mpmc_blocking_q.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\null_mutex.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\os.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\os-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\periodic_worker.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\periodic_worker-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\registry.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\registry-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\synchronous_factory.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\tcp_client.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\tcp_client-windows.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\thread_pool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\thread_pool-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\udp_client.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\udp_client-windows.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\windows_include.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\args.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\base.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\chrono.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\color.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\compile.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\core.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\format.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\format-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\os.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\ostream.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\printf.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\ranges.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\std.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\xchar.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bin_to_hex.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\chrono.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\compile.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\fmt.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\ostr.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\ranges.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\std.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\xchar.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\android_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\ansicolor_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\ansicolor_sink-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\base_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\base_sink-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\basic_file_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\basic_file_sink-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\callback_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\daily_file_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\dist_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\dup_filter_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\hourly_file_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\kafka_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\mongo_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\msvc_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\null_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\ostream_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\qt_sinks.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\ringbuffer_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\rotating_file_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\rotating_file_sink-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\sink-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\stdout_color_sinks.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\stdout_color_sinks-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\stdout_sinks.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\stdout_sinks-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\syslog_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\systemd_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\tcp_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\udp_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\win_eventlog_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\wincolor_sink.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\wincolor_sink-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\async.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\async_logger.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\async_logger-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\common.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\common-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\formatter.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\fwd.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\logger.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\logger-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\mdc.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\pattern_formatter.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\pattern_formatter-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\spdlog.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\spdlog-inl.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\stopwatch.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\tweakme.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\spdlog\include\spdlog\version.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\sqlite3\sqlite3.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="third_library\include\asio.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="logs\adapterFlowTrend.json" />
+    <None Include="third_library\ip2region\ip2region.xdb" />
+    <None Include="third_library\ip2region\.DS_Store" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="logs\log.txt" />
+  </ItemGroup>
+</Project>

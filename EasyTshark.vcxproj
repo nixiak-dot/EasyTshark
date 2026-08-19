@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{aa7c3974-bbe2-49b0-a60b-68744ee582c4}</ProjectGuid>
+    <RootNamespace>EasyTshark</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>D:\C++\EasyTshark\include\WSController;$(ProjectDir)include;$(ProjectDir)third_library;$(IncludePath);D:\C++\EasyTshark\include\Controller</IncludePath>
+    <ExternalIncludePath>D:\C++\EasyTshark\third_library\include;D:\C++\EasyTshark\third_library;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>D:\C++\EasyTshark\include\WSController;$(ProjectDir)include;$(ProjectDir)third_library;$(IncludePath);D:\C++\EasyTshark\include\Controller</IncludePath>
+    <ExternalIncludePath>D:\C++\EasyTshark\third_library\include;D:\C++\EasyTshark\third_library;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>D:\C++\EasyTshark\include\WSController;$(VC_IncludePath);$(WindowsSDK_IncludePath);;D:\C++\EasyTshark\include\Controller</IncludePath>
+    <ExternalIncludePath>D:\C++\EasyTshark\third_library\include;D:\C++\EasyTshark\third_library;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>D:\C++\EasyTshark\include\WSController;$(VC_IncludePath);$(WindowsSDK_IncludePath);;D:\C++\EasyTshark\include\Controller</IncludePath>
+    <ExternalIncludePath>D:\C++\EasyTshark\third_library\include;D:\C++\EasyTshark\third_library;$(ExternalIncludePath)</ExternalIncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>ASIO_STANDALONE;_WEBSOCKETPP_CPP11_TYPE_TRAITS_;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(ProjectDir)include\;$(ProjectDir)third_library\;$(ProjectDir)third_library\spdlog\include</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>ASIO_STANDALONE;_WEBSOCKETPP_CPP11_TYPE_TRAITS_;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>ASIO_STANDALONE;_WEBSOCKETPP_CPP11_TYPE_TRAITS_;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(ProjectDir)include\;$(ProjectDir)third_library\;$(ProjectDir)third_library\spdlog\include</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>ASIO_STANDALONE;_WEBSOCKETPP_CPP11_TYPE_TRAITS_;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\Controller\AdapterController.cpp" />
+    <ClCompile Include="src\Controller\BaseController.cpp" />
+    <ClCompile Include="src\Controller\PacketController.cpp" />
+    <ClCompile Include="src\Controller\SessionController.cpp" />
+    <ClCompile Include="src\Controller\StatsController.cpp" />
+    <ClCompile Include="src\EasyTshark.cpp" />
+    <ClCompile Include="src\IP2RegionUtil.cpp" />
+    <ClCompile Include="src\Logger.cpp" />
+    <ClCompile Include="src\PageHelper.cpp" />
+    <ClCompile Include="src\TsharkDatabase.cpp" />
+    <ClCompile Include="src\TsharkManager.cpp" />
+    <ClCompile Include="third_library\ip2region\xdb_bench.cc" />
+    <ClCompile Include="third_library\ip2region\xdb_search.cc" />
+    <ClCompile Include="third_library\sqlite3\sqlite3.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\Controller\AdapterController.h" />
+    <ClInclude Include="include\Controller\BaseController.h" />
+    <ClInclude Include="include\Controller\PacketController.h" />
+    <ClInclude Include="include\Controller\SessionController.h" />
+    <ClInclude Include="include\Controller\StatsController.h" />
+    <ClInclude Include="include\IP2RegionUtil.h" />
+    <ClInclude Include="include\PacketSQL.h" />
+    <ClInclude Include="include\PageHelper.h" />
+    <ClInclude Include="include\ProcessUtil.h" />
+    <ClInclude Include="include\QueryCondition.h" />
+    <ClInclude Include="include\SessionSQL.h" />
+    <ClInclude Include="include\StatsSQL.h" />
+    <ClInclude Include="include\TsharkDatabase.h" />
+    <ClInclude Include="include\TsharkManager.h" />
+    <ClInclude Include="include\tshark_datatype.h" />
+    <ClInclude Include="include\Logger.h" />
+    <ClInclude Include="include\MiscUtil.h" />
+    <ClInclude Include="third_library\httplib\httplib.h" />
+    <ClInclude Include="third_library\include\asio.hpp" />
+    <ClInclude Include="third_library\ip2region\xdb_bench.h" />
+    <ClInclude Include="third_library\ip2region\xdb_search.h" />
+    <ClInclude Include="third_library\rapidjson\allocators.h" />
+    <ClInclude Include="third_library\rapidjson\cursorstreamwrapper.h" />
+    <ClInclude Include="third_library\rapidjson\document.h" />
+    <ClInclude Include="third_library\rapidjson\encodedstream.h" />
+    <ClInclude Include="third_library\rapidjson\encodings.h" />
+    <ClInclude Include="third_library\rapidjson\error\en.h" />
+    <ClInclude Include="third_library\rapidjson\error\error.h" />
+    <ClInclude Include="third_library\rapidjson\filereadstream.h" />
+    <ClInclude Include="third_library\rapidjson\filewritestream.h" />
+    <ClInclude Include="third_library\rapidjson\fwd.h" />
+    <ClInclude Include="third_library\rapidjson\internal\biginteger.h" />
+    <ClInclude Include="third_library\rapidjson\internal\clzll.h" />
+    <ClInclude Include="third_library\rapidjson\internal\diyfp.h" />
+    <ClInclude Include="third_library\rapidjson\internal\dtoa.h" />
+    <ClInclude Include="third_library\rapidjson\internal\ieee754.h" />
+    <ClInclude Include="third_library\rapidjson\internal\itoa.h" />
+    <ClInclude Include="third_library\rapidjson\internal\meta.h" />
+    <ClInclude Include="third_library\rapidjson\internal\pow10.h" />
+    <ClInclude Include="third_library\rapidjson\internal\regex.h" />
+    <ClInclude Include="third_library\rapidjson\internal\stack.h" />
+    <ClInclude Include="third_library\rapidjson\internal\strfunc.h" />
+    <ClInclude Include="third_library\rapidjson\internal\strtod.h" />
+    <ClInclude Include="third_library\rapidjson\internal\swap.h" />
+    <ClInclude Include="third_library\rapidjson\istreamwrapper.h" />
+    <ClInclude Include="third_library\rapidjson\memorybuffer.h" />
+    <ClInclude Include="third_library\rapidjson\memorystream.h" />
+    <ClInclude Include="third_library\rapidjson\msinttypes\inttypes.h" />
+    <ClInclude Include="third_library\rapidjson\msinttypes\stdint.h" />
+    <ClInclude Include="third_library\rapidjson\ostreamwrapper.h" />
+    <ClInclude Include="third_library\rapidjson\pointer.h" />
+    <ClInclude Include="third_library\rapidjson\prettywriter.h" />
+    <ClInclude Include="third_library\rapidjson\rapidjson.h" />
+    <ClInclude Include="third_library\rapidjson\reader.h" />
+    <ClInclude Include="third_library\rapidjson\schema.h" />
+    <ClInclude Include="third_library\rapidjson\stream.h" />
+    <ClInclude Include="third_library\rapidjson\stringbuffer.h" />
+    <ClInclude Include="third_library\rapidjson\uri.h" />
+    <ClInclude Include="third_library\rapidjson\writer.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\async.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\async_logger-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\async_logger.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\cfg\argv.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\cfg\env.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\cfg\helpers-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\cfg\helpers.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\common-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\common.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\backtracer-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\backtracer.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\circular_q.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\console_globals.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\file_helper-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\file_helper.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\fmt_helper.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\log_msg-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\log_msg.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\log_msg_buffer-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\log_msg_buffer.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\mpmc_blocking_q.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\null_mutex.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\os-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\os.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\periodic_worker-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\periodic_worker.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\registry-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\registry.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\synchronous_factory.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\tcp_client-windows.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\tcp_client.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\thread_pool-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\thread_pool.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\udp_client-windows.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\udp_client.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\details\windows_include.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bin_to_hex.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\args.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\base.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\chrono.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\color.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\compile.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\core.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\format-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\format.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\os.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\ostream.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\printf.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\ranges.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\std.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\bundled\xchar.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\chrono.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\compile.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\fmt.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\ostr.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\ranges.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\std.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fmt\xchar.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\formatter.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\fwd.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\logger-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\logger.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\mdc.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\pattern_formatter-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\pattern_formatter.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\android_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\ansicolor_sink-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\ansicolor_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\base_sink-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\base_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\basic_file_sink-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\basic_file_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\callback_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\daily_file_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\dist_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\dup_filter_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\hourly_file_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\kafka_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\mongo_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\msvc_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\null_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\ostream_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\qt_sinks.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\ringbuffer_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\rotating_file_sink-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\rotating_file_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\sink-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\stdout_color_sinks-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\stdout_color_sinks.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\stdout_sinks-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\stdout_sinks.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\syslog_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\systemd_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\tcp_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\udp_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\wincolor_sink-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\wincolor_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\sinks\win_eventlog_sink.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\spdlog-inl.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\spdlog.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\stopwatch.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\tweakme.h" />
+    <ClInclude Include="third_library\spdlog\include\spdlog\version.h" />
+    <ClInclude Include="third_library\sqlite3\sqlite3.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="logs\adapterFlowTrend.json" />
+    <None Include="third_library\ip2region\.DS_Store" />
+    <None Include="third_library\ip2region\ip2region.xdb" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="logs\log.txt" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
