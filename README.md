@@ -103,3 +103,5 @@ npm run electron-build
 - `myPacketDatabase.db`
 
 这些都不需要提交到仓库。
+![72d58b623089647ce6c7b0fbbb84a77b.png](./72d58b623089647ce6c7b0fbbb84a77b.png)
+![8243aad1efc9476ac9c0c7dd868e810a.png](./8243aad1efc9476ac9c0c7dd868e810a.png)
