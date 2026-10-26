@@ -1,0 +1,169 @@
+.table-demo-resizable-column {
+  width: 100%;
+  color: #334155;
+}
+
+.table-demo-resizable-column .arco-table-container {
+  border: none;
+}
+
+.table-demo-resizable-column .arco-table-content,
+.table-demo-resizable-column .arco-table-header,
+.table-demo-resizable-column .arco-table-body {
+  background: #f3f7fc;
+}
+
+.table-demo-resizable-column.arco-table table {
+  table-layout: fixed;
+  min-width: 0;
+  border-collapse: separate;
+  border-spacing: 0 7px;
+}
+
+.table-demo-resizable-column.arco-table .arco-table-content-inner {
+  overflow: hidden;
+}
+
+.table-demo-resizable-column .arco-table-th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 0;
+  border: none;
+  background: #edf3fb;
+  color: #526681;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.table-demo-resizable-column .arco-table-th-item {
+  padding: 11px 16px;
+}
+
+.table-demo-resizable-column .arco-table-th:first-child .arco-table-th-item {
+  padding-left: 20px;
+}
+
+.table-demo-resizable-column .arco-table-th,
+.table-demo-resizable-column .arco-table-td,
+.table-demo-resizable-column .arco-table-cell {
+  white-space: nowrap;
+  word-break: normal;
+}
+
+.table-demo-resizable-column .arco-table-th.arco-table-col-fixed-right {
+  z-index: 4;
+}
+
+.table-demo-resizable-column .arco-table-th:first-child {
+  border-radius: 8px 0 0 8px;
+}
+
+.table-demo-resizable-column .arco-table-th:last-child {
+  border-radius: 0 8px 8px 0;
+}
+
+.table-demo-resizable-column .react-resizable {
+  background-clip: padding-box;
+}
+
+.table-demo-resizable-column .react-resizable-handle {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  z-index: 1;
+  background: transparent;
+}
+
+.table-demo-resizable-column .react-resizable-handle::after {
+  content: '';
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  left: 3px;
+  width: 2px;
+  border-radius: 2px;
+  background: #86afff;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.table-demo-resizable-column .arco-table-th:hover .react-resizable-handle::after,
+.table-demo-resizable-column .react-resizable-handle:active::after {
+  opacity: 1;
+}
+
+.table-demo-resizable-column tbody .arco-table-td {
+  height: 44px;
+  padding: 9px 16px;
+  border: none;
+  border-top: 1px solid #e2eaf5;
+  border-bottom: 1px solid #d9e4f2;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+  box-shadow: inset 0 1px 0 #ffffff, 0 3px 3px -2px rgba(36, 72, 124, 0.16);
+  color: #334155;
+  font-variant-numeric: tabular-nums;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
+}
+
+.table-demo-resizable-column tbody .arco-table-td:first-child {
+  position: relative;
+  border-left: 1px solid #e2eaf5;
+  border-radius: 8px 0 0 8px;
+  padding-left: 20px;
+  color: #42618c;
+  font-weight: 600;
+}
+
+.table-demo-resizable-column tbody .arco-table-td:last-child {
+  border-right: 1px solid #e2eaf5;
+  border-radius: 0 8px 8px 0;
+}
+
+.table-demo-resizable-column tbody .arco-table-tr:hover .arco-table-td {
+  border-color: #bdd4f6;
+  background: linear-gradient(180deg, #f7fbff 0%, #eaf3ff 100%);
+  box-shadow: inset 0 1px 0 #ffffff, 0 3px 4px -2px rgba(36, 94, 177, 0.22);
+}
+
+.table-demo-resizable-column tbody .selected-row .arco-table-td,
+.table-demo-resizable-column tbody .selected-row:hover .arco-table-td {
+  border-color: #3979dd;
+  background: linear-gradient(180deg, #a8ccff 0%, #82b4fa 100%);
+  box-shadow: inset 0 1px 0 #d8e9ff, 0 3px 4px -2px rgba(22, 93, 255, 0.36);
+  color: #0b306b;
+}
+
+.table-demo-resizable-column tbody .selected-row .arco-table-td:first-child::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 7px;
+  bottom: 7px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: #165dff;
+  box-shadow: 2px 0 6px rgba(22, 93, 255, 0.2);
+  pointer-events: none;
+}
+
+.table-demo-resizable-column .selected-row .arco-btn-outline {
+  border-color: #8cb4f5;
+  background: #f0f6ff;
+  color: #165dff;
+}
+
+.table-demo-resizable-column .selected-row .arco-btn-outline:hover {
+  border-color: #165dff;
+  background: #ffffff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table-demo-resizable-column tbody .arco-table-td,
+  .table-demo-resizable-column .react-resizable-handle::after {
+    transition: none;
+  }
+}

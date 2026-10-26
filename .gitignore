@@ -40,3 +40,7 @@ Thumbs.db
 
 # Third-party C/C++ dependencies are kept local for now.
 third_library/
+
+# Frontend executable artifacts
+tshark-front/dist/*.exe
+tshark-front/resources/tshark_win/*.exe
