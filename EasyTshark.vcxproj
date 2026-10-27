@@ -166,6 +166,7 @@
     <ClCompile Include="src\PageHelper.cpp" />
     <ClCompile Include="src\TsharkDatabase.cpp" />
     <ClCompile Include="src\TsharkManager.cpp" />
+    <ClCompile Include="src\TrafficFilter.cpp" />
     <ClCompile Include="third_library\ip2region\xdb_bench.cc" />
     <ClCompile Include="third_library\ip2region\xdb_search.cc" />
     <ClCompile Include="third_library\sqlite3\sqlite3.c" />
@@ -185,11 +186,11 @@
     <ClInclude Include="include\StatsSQL.h" />
     <ClInclude Include="include\TsharkDatabase.h" />
     <ClInclude Include="include\TsharkManager.h" />
+    <ClInclude Include="include\TrafficFilter.h" />
     <ClInclude Include="include\tshark_datatype.h" />
     <ClInclude Include="include\Logger.h" />
     <ClInclude Include="include\MiscUtil.h" />
     <ClInclude Include="third_library\httplib\httplib.h" />
-    <ClInclude Include="third_library\include\asio.hpp" />
     <ClInclude Include="third_library\ip2region\xdb_bench.h" />
     <ClInclude Include="third_library\ip2region\xdb_search.h" />
     <ClInclude Include="third_library\rapidjson\allocators.h" />

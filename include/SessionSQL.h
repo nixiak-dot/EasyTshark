@@ -15,24 +15,22 @@ public:
 
         std::vector<std::string> conditionList;
         if (!condition.proto.empty()) {
-            char buf[100] = { 0 };
-            snprintf(buf, sizeof(buf), "(app_proto like '%%%s%%' or trans_proto like '%%%s%%')", condition.proto.c_str(), condition.proto.c_str());
-            conditionList.push_back(buf);
+            conditionList.push_back("(app_proto LIKE ? OR trans_proto LIKE ?)");
         }
         if (!condition.ip.empty()) {
-            char buf[100] = { 0 };
-            snprintf(buf, sizeof(buf), "(ip1='%s' or ip2='%s')", condition.ip.c_str(), condition.ip.c_str());
-            conditionList.push_back(buf);
+            conditionList.push_back("(ip1=? OR ip2=?)");
         }
         if (condition.port != 0) {
-            char buf[100] = { 0 };
-            snprintf(buf, sizeof(buf), "(ip1_port=%d or ip2_port=%d)", condition.port, condition.port);
-            conditionList.push_back(buf);
+            conditionList.push_back("(ip1_port=? OR ip2_port=?)");
         }
         if (condition.session_id != 0) {
-            char buf[100] = { 0 };
-            snprintf(buf, sizeof(buf), "(session_id=%d)", condition.session_id);
-            conditionList.push_back(buf);
+            conditionList.push_back("(session_id=?)");
+        }
+        if (!condition.keyword.empty()) {
+            conditionList.push_back("(ip1 LIKE ? ESCAPE '\\' OR ip2 LIKE ? ESCAPE '\\' OR trans_proto LIKE ? ESCAPE '\\' OR app_proto LIKE ? ESCAPE '\\')");
+        }
+        if (!condition.sessionFilterSql.empty()) {
+            conditionList.push_back(condition.sessionFilterSql);
         }
 
         // 拼接 WHERE 条件

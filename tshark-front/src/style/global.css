@@ -23,6 +23,22 @@
   overflow: hidden;
 }
 
+.traffic-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid #dbe5f2;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.traffic-filter-bar .arco-input-wrapper {
+  flex: 1;
+  min-width: 240px;
+}
+
 .packet-table-resize-handle {
   position: absolute;
   bottom: 0;

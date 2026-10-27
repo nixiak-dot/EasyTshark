@@ -159,6 +159,86 @@ bool TsharkDatabase::storePackets(std::vector<std::shared_ptr<Packet>> packets) 
 }
 
 //查询
+namespace {
+std::string buildLikePattern(const std::string& value) {
+	std::string pattern = "%";
+	for (char character : value) {
+		if (character == '%' || character == '_' || character == '\\') {
+			pattern.push_back('\\');
+		}
+		pattern.push_back(character);
+	}
+	pattern.push_back('%');
+	return pattern;
+}
+
+void bindPacketQueryConditions(sqlite3_stmt* statement, const QueryCondition& condition) {
+	int parameterIndex = 1;
+	auto bindText = [&](const std::string& value) {
+		sqlite3_bind_text(statement, parameterIndex++, value.c_str(), -1, SQLITE_TRANSIENT);
+	};
+
+	if (!condition.ip.empty()) {
+		bindText(condition.ip);
+		bindText(condition.ip);
+	}
+	if (condition.port != 0) {
+		sqlite3_bind_int(statement, parameterIndex++, condition.port);
+		sqlite3_bind_int(statement, parameterIndex++, condition.port);
+	}
+	if (!condition.proto.empty()) {
+		bindText(condition.proto);
+	}
+	if (condition.session_id != 0) {
+		sqlite3_bind_int(statement, parameterIndex++, condition.session_id);
+	}
+	if (!condition.keyword.empty()) {
+		const std::string pattern = buildLikePattern(condition.keyword);
+		bindText(pattern);
+		bindText(pattern);
+		bindText(pattern);
+	}
+	for (const auto& parameter : condition.packetFilterParameters) {
+		if (parameter.integer) sqlite3_bind_int(statement, parameterIndex++, parameter.number);
+		else bindText(parameter.text);
+	}
+}
+
+void bindSessionQueryConditions(sqlite3_stmt* statement, const QueryCondition& condition) {
+	int parameterIndex = 1;
+	auto bindText = [&](const std::string& value) {
+		sqlite3_bind_text(statement, parameterIndex++, value.c_str(), -1, SQLITE_TRANSIENT);
+	};
+
+	if (!condition.proto.empty()) {
+		bindText(buildLikePattern(condition.proto));
+		bindText(buildLikePattern(condition.proto));
+	}
+	if (!condition.ip.empty()) {
+		bindText(condition.ip);
+		bindText(condition.ip);
+	}
+	if (condition.port != 0) {
+		sqlite3_bind_int(statement, parameterIndex++, condition.port);
+		sqlite3_bind_int(statement, parameterIndex++, condition.port);
+	}
+	if (condition.session_id != 0) {
+		sqlite3_bind_int(statement, parameterIndex++, condition.session_id);
+	}
+	if (!condition.keyword.empty()) {
+		const std::string pattern = buildLikePattern(condition.keyword);
+		bindText(pattern);
+		bindText(pattern);
+		bindText(pattern);
+		bindText(pattern);
+	}
+	for (const auto& parameter : condition.sessionFilterParameters) {
+		if (parameter.integer) sqlite3_bind_int(statement, parameterIndex++, parameter.number);
+		else bindText(parameter.text);
+	}
+}
+}
+
 bool TsharkDatabase::queryPackets(QueryCondition &queryCondition,std::vector<std::shared_ptr<Packet>> &packetList,int& total) {
 
     sqlite3_stmt* stmt = nullptr, * countStmt = nullptr;
@@ -169,12 +249,7 @@ bool TsharkDatabase::queryPackets(QueryCondition &queryCondition,std::vector<std
         Logger::LOG_ERROR("Failed to prepare query statement");
         return false;
     }
-
-    //填充sql语句占位符
-    sqlite3_bind_text(stmt,1,queryCondition.ip.c_str(),-1,SQLITE_STATIC);
-    sqlite3_bind_text(stmt,2, queryCondition.ip.c_str(),-1,SQLITE_STATIC);
-    sqlite3_bind_int(stmt,3, queryCondition.port);
-    sqlite3_bind_int(stmt,4, queryCondition.port);
+	bindPacketQueryConditions(stmt, queryCondition);
 
     
     while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -206,6 +281,7 @@ bool TsharkDatabase::queryPackets(QueryCondition &queryCondition,std::vector<std
         std::cout << "Failed to prepare statement: " << sqlite3_errmsg(db) << std::endl;
         return false;
     }
+	bindPacketQueryConditions(countStmt, queryCondition);
     // 执行查询并获取结果
     if (sqlite3_step(countStmt) == SQLITE_ROW) {
         total = sqlite3_column_int(countStmt, 0);
@@ -293,6 +369,7 @@ bool TsharkDatabase::querySessions(QueryCondition & condition, std::vector<std::
         std::cout << "Failed to prepare statement: " << sqlite3_errmsg(db) << std::endl;
         return false;
     }
+	bindSessionQueryConditions(stmt, condition);
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         std::shared_ptr<Session> session = std::make_shared<Session>();
@@ -324,6 +401,7 @@ bool TsharkDatabase::querySessions(QueryCondition & condition, std::vector<std::
         std::cout << "Failed to prepare statement: " << sqlite3_errmsg(db) << std::endl;
         return false;
     }
+	bindSessionQueryConditions(countStmt, condition);
     // 执行查询并获取结果
     if (sqlite3_step(countStmt) == SQLITE_ROW) {
         total = sqlite3_column_int(countStmt, 0);

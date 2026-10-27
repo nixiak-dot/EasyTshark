@@ -25,7 +25,17 @@ jest.mock('@arco-design/web-react', () => ({
     <button onClick={() => onChange(current + 1)}>Next page</button>
   ),
   Tree: () => null,
-  Button: ({ children }) => <button>{children}</button>,
+  Input: ({ value, onChange, onPressEnter, placeholder }) => (
+    <input
+      value={value}
+      placeholder={placeholder}
+      onChange={(event) => onChange(event.target.value)}
+      onKeyDown={(event) => event.key === 'Enter' && onPressEnter()}
+    />
+  ),
+  Button: ({ children, onClick, disabled }) => (
+    <button onClick={onClick} disabled={disabled}>{children}</button>
+  ),
 }));
 
 const packetProps = { match: { params: { type: 'all' } } };
@@ -117,4 +127,55 @@ test('session list preserves the selected session when its data is replaced', as
   await screen.findByTestId('row-3');
   expect(screen.getByTestId('row-2')).toHaveClass('selected-row');
   expect(screen.getByTestId('row-3')).not.toHaveClass('selected-row');
+});
+
+test('all packets submit a protocol and endpoint filter expression', async () => {
+  render(<DataPacketPage {...packetProps} />);
+  await screen.findByTestId('row-1');
+
+  const expression = 'src.ip=192.0.2.1 && dst.port=443 && proto=TCP';
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: expression } });
+  fireEvent.click(screen.getByText('筛选'));
+
+  await waitFor(() => {
+    const requests = apiPost.mock.calls.filter(([path]) => path === '/api/queryPacket');
+    expect(requests[requests.length - 1]).toEqual([
+      '/api/queryPacket',
+      { pageSize: 30, pageNum: 1, session_id: 0, filterExpression: expression },
+    ]);
+  });
+});
+
+test('all sessions accept simple protocol or IP keywords', async () => {
+  render(<SessionPage match={{ params: { type: 'all' } }} />);
+  await screen.findByTestId('row-1');
+
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: '192.0.2.1' } });
+  fireEvent.click(screen.getByText('筛选'));
+
+  await waitFor(() => {
+    const requests = apiPost.mock.calls.filter(([path]) => path === '/api/getSessionList');
+    expect(requests[requests.length - 1]).toEqual([
+      '/api/getSessionList',
+      { pageSize: 30, pageNum: 1, filterExpression: '192.0.2.1' },
+    ]);
+  });
+});
+
+test('all sessions submit grouped AND/OR filter expressions unchanged', async () => {
+  render(<SessionPage match={{ params: {} }} />);
+  await screen.findByTestId('row-1');
+
+  expect(screen.getByRole('textbox')).toBeInTheDocument();
+  const expression = '(src.ip=192.0.2.1 && src.port=53) || (dst.ip=198.51.100.2 && proto=DNS)';
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: expression } });
+  fireEvent.click(screen.getByText('筛选'));
+
+  await waitFor(() => {
+    const requests = apiPost.mock.calls.filter(([path]) => path === '/api/getSessionList');
+    expect(requests[requests.length - 1]).toEqual([
+      '/api/getSessionList',
+      { pageSize: 30, pageNum: 1, filterExpression: expression },
+    ]);
+  });
 });

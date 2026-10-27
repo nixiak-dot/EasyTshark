@@ -27,6 +27,9 @@
     <ClCompile Include="src\TsharkDatabase.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="src\TrafficFilter.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
     <ClCompile Include="src\Logger.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -81,6 +84,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="include\QueryCondition.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TrafficFilter.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="include\PacketSQL.h">
@@ -546,9 +552,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="third_library\sqlite3\sqlite3.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="third_library\include\asio.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

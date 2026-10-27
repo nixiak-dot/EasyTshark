@@ -19,7 +19,7 @@ void SessionController::getSessionList(const httplib::Request& request, httplib:
     try {
         QueryCondition queryCondition;
         if (!parseQueryCondition(request, queryCondition)) {
-            sendErrorResponse(response, "param parse failed!");
+            return sendErrorResponse(response, "param parse failed!");
         }
 
         //调用tsharkManager方法获取数据

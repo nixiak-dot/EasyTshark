@@ -20,24 +20,22 @@ public:
 
 		std::vector<std::string> conditionList;
 		if (!queryCondition.ip.empty()) {
-			char buf[100] = { 0 };
-			snprintf(buf, sizeof(buf), "(src_ip='%s' or dst_ip='%s')", queryCondition.ip.c_str(), queryCondition.ip.c_str());
-			conditionList.push_back(buf);
+			conditionList.push_back("(src_ip=? OR dst_ip=?)");
 		}
 		if (queryCondition.port != 0) {
-			char buf[100] = { 0 };
-			snprintf(buf, sizeof(buf), "(src_port=%d or dst_port=%d)", queryCondition.port, queryCondition.port);
-			conditionList.push_back(buf);
+			conditionList.push_back("(src_port=? OR dst_port=?)");
 		}
 		if (!queryCondition.proto.empty()) {
-			char buf[100] = { 0 };
-			snprintf(buf, sizeof(buf), "(protocol='%s')", queryCondition.proto.c_str());
-			conditionList.push_back(buf);
+			conditionList.push_back("(protocol=?)");
 		}
 		if (queryCondition.session_id != 0) {
-			char buf[100] = { 0 };
-			snprintf(buf, sizeof(buf), "belong_session_id=%d", queryCondition.session_id);
-			conditionList.push_back(buf);
+			conditionList.push_back("belong_session_id=?");
+		}
+		if (!queryCondition.keyword.empty()) {
+			conditionList.push_back("(src_ip LIKE ? ESCAPE '\\' OR dst_ip LIKE ? ESCAPE '\\' OR protocol LIKE ? ESCAPE '\\')");
+		}
+		if (!queryCondition.packetFilterSql.empty()) {
+			conditionList.push_back(queryCondition.packetFilterSql);
 		}
 
 		// 拼接 WHERE 条件

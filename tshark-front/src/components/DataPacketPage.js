@@ -1,5 +1,5 @@
 import { useState, forwardRef ,useEffect,useImperativeHandle,useRef} from 'react';
-import { Table,Pagination,Tree } from '@arco-design/web-react';
+import { Table,Pagination,Tree,Input,Button } from '@arco-design/web-react';
 import { Resizable } from 'react-resizable';
 import useContentColumnWidths from './useContentColumnWidths';
 import dayjs from 'dayjs';
@@ -119,6 +119,10 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState(30);
   const [dataList, setDataList] = useState([])
+  const [searchInput, setSearchInput] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const searchKeywordRef = useRef(searchKeyword);
+  searchKeywordRef.current = searchKeyword;
 
   const [treeData,setTreeData] = useState([]);
   const [selectedKeys, setSelectedKeys] = useState([]);
@@ -136,31 +140,30 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
   const INTERVAL = 3000;
   const STATUS_CHECK_INTERVAL = 5000; 
 
+  const submitSearch = () => {
+    setCurrentPage(1);
+    setSearchKeyword(searchInput.trim());
+  };
+
+  const clearSearch = () => {
+    setSearchInput('');
+    setCurrentPage(1);
+    setSearchKeyword('');
+  };
+
   const loadData = async ()=>{
     setLoading(true);
 
-    //协议
-    let proto='';
     let sessionId = 0;
-    if (props.match.params.type === 'arp') {
-      proto = "ARP"
-    } else if (props.match.params.type === 'icmp') {
-      proto = "ICMP"
-    } else if (props.match.params.type === 'icmpv6') {
-      proto = "ICMPv6"
-    }
-    else if(props.match.params.type === 'detail'){
+    if(props.match.params.type === 'detail'){
       sessionId = parseInt(props.match.params.sessionId)
-    } 
-    else {
-      proto = ""
     }
 
     const _data = await apiPost('/api/queryPacket',{
       "pageSize":pageSize,
       "pageNum":currentPage,
-      "proto":proto,
-      "session_id":sessionId
+      "session_id":sessionId,
+      "filterExpression":searchKeywordRef.current
     })
     console.log(_data.data)
     setDataList(_data.data)
@@ -170,7 +173,7 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
 
   useEffect(()=>{
     loadData();
-  },[currentPage, pageSize, props.match.params.type]);
+  },[currentPage, pageSize, props.match.params.type, props.match.params.sessionId, searchKeyword]);
 
   
   // 暴露方法给父组件
@@ -421,6 +424,18 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
 
   return (
     <div>
+      {props.match.params.type !== 'detail' && (
+        <div className='traffic-filter-bar'>
+          <Input
+            value={searchInput}
+            placeholder='如 src.ip=192.0.2.1 && dst.port=443 && proto=TCP'
+            onChange={setSearchInput}
+            onPressEnter={submitSearch}
+          />
+          <Button type='primary' onClick={submitSearch}>筛选</Button>
+          <Button onClick={clearSearch} disabled={!searchInput && !searchKeyword}>清除</Button>
+        </div>
+      )}
       <Resizable
         width={0}
         height={packetTableHeight}

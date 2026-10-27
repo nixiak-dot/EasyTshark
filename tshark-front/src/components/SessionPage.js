@@ -1,5 +1,5 @@
 import { useState, forwardRef ,useEffect} from 'react';
-import { Table,Pagination,Button } from '@arco-design/web-react';
+import { Table,Pagination,Button,Input } from '@arco-design/web-react';
 import { Resizable } from 'react-resizable';
 import useContentColumnWidths from './useContentColumnWidths';
 import dayjs from 'dayjs';
@@ -151,31 +151,28 @@ function SessionPage(props) {
   const [pageSize, setPageSize] = useState(30);
   const [dataList, setDataList] = useState([])
   const [selectedRowId, setSelectedRowId] = useState(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
+
+  const submitSearch = () => {
+    setCurrentPage(1);
+    setSearchKeyword(searchInput.trim());
+  };
+
+  const clearSearch = () => {
+    setSearchInput('');
+    setCurrentPage(1);
+    setSearchKeyword('');
+  };
 
 
   const loadData = async ()=>{
     setLoading(true);
 
-    //协议
-    let proto = '';
-    if (props.match.params.type === 'tcp') {
-      proto = "TCP"
-    } else if (props.match.params.type === 'udp') {
-      proto = "UDP"
-    } else if (props.match.params.type === 'dns') {
-      proto = "DNS"
-    } else if (props.match.params.type === 'http') {
-      proto = "HTTP"
-    } else if (props.match.params.type === 'tls') {
-      proto = "TLS"
-    } else if (props.match.params.type === 'ssh') {
-      proto = "SSH"
-    }
-
     const _data = await apiPost('/api/getSessionList',{
       "pageSize":pageSize,
       "pageNum":currentPage,
-      "proto":proto
+      "filterExpression":searchKeyword
     })
     console.log(_data.data)
     setDataList(_data.data)
@@ -185,7 +182,7 @@ function SessionPage(props) {
 
   useEffect(()=>{
     loadData();
-  },[currentPage, pageSize, props.match.params.type])
+  },[currentPage, pageSize, props.match.params.type, searchKeyword])
 
   const [columns, setColumns] = useState(
     originColumns.map((column, index) => {
@@ -223,6 +220,18 @@ function SessionPage(props) {
   };
   return (
     <div>
+      {props.match.params.type !== 'detail' && (
+        <div className='traffic-filter-bar'>
+          <Input
+            value={searchInput}
+            placeholder='如 src.ip=192.0.2.1 && dst.port=443 && proto=TCP'
+            onChange={setSearchInput}
+            onPressEnter={submitSearch}
+          />
+          <Button type='primary' onClick={submitSearch}>筛选</Button>
+          <Button onClick={clearSearch} disabled={!searchInput && !searchKeyword}>清除</Button>
+        </div>
+      )}
       <div ref={tableRef} className="table-window table-window-session">
       <Table
         className='table-demo-resizable-column'

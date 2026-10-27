@@ -88,6 +88,35 @@ bool BaseController::parseQueryCondition(const httplib::Request& request, QueryC
             queryCondition.ip = doc["ip"].GetString();
         }
 
+        if (doc.HasMember("keyword") && doc["keyword"].IsString()) {
+            queryCondition.keyword = doc["keyword"].GetString();
+        }
+
+        if (doc.HasMember("filterExpression") && doc["filterExpression"].IsString()) {
+            queryCondition.filterExpression = doc["filterExpression"].GetString();
+            if (queryCondition.filterExpression.size() > 4096) {
+                Logger::LOG_ERROR("筛选表达式过长");
+                return false;
+            }
+            if (queryCondition.filterExpression.find_first_of("=!&|()") == std::string::npos) {
+                const size_t first = queryCondition.filterExpression.find_first_not_of(" \t\r\n");
+                if (first != std::string::npos) {
+                    const size_t last = queryCondition.filterExpression.find_last_not_of(" \t\r\n");
+                    queryCondition.keyword = queryCondition.filterExpression.substr(first, last - first + 1);
+                }
+            }
+            else {
+                std::string filterError;
+                if (!TrafficFilter::compile(queryCondition.filterExpression, TrafficFilterScope::Packets,
+                        queryCondition.packetFilterSql, queryCondition.packetFilterParameters, filterError) ||
+                    !TrafficFilter::compile(queryCondition.filterExpression, TrafficFilterScope::Sessions,
+                        queryCondition.sessionFilterSql, queryCondition.sessionFilterParameters, filterError)) {
+                    Logger::LOG_ERROR("筛选表达式无效:{}", filterError);
+                    return false;
+                }
+            }
+        }
+
         if (doc.HasMember("port") && doc["port"].IsUint()) {
             queryCondition.port = static_cast<uint16_t>(doc["port"].GetUint());
         }

@@ -23,8 +23,8 @@ const PageLayout = () => {
               <SideBar></SideBar>
             </Sider>
             <Content>
-              <Route path="/data/dataPacket/:type" component={DataPacketPage} />
-              <Route path="/data/session/:type" component={SessionPage} />
+              <Route exact path="/data/dataPacket/all" component={DataPacketPage} />
+              <Route exact path="/data/session/all" component={SessionPage} />
             </Content>
           </Layout>
         </Layout>
