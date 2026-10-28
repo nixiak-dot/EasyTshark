@@ -1,0 +1,83 @@
+.settings-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 22px;
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+.settings-modal .arco-modal-content {
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
+}
+
+.settings-modal .arco-divider-text {
+  font-size: 14px;
+}
+
+.settings-path-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-path-input .arco-input-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-path-input .arco-input {
+  font-family: Consolas, 'Microsoft YaHei', monospace;
+}
+
+.settings-path-input .arco-btn {
+  flex-shrink: 0;
+}
+
+.settings-modal .arco-alert + .arco-alert {
+  margin-top: 12px;
+}
+
+.settings-persistence {
+.settings-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: var(--border-radius-medium);
+  background: var(--color-fill-2);
+}
+
+.settings-note > .arco-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--color-text-3);
+}
+
+.settings-note .arco-typography {
+  margin-bottom: 0;
+  color: var(--color-text-2);
+  font-size: 12px;
+}
+  margin-top: 16px;
+  color: var(--color-text-3);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.settings-progress {
+  color: var(--color-text-2);
+  font-size: 13px;
+}
+
+.settings-connection-error {
+  padding: 16px;
+  color: var(--color-danger-6);
+}
+
+.filter-help { position: relative; display: inline-flex; flex-shrink: 0; }
+.filter-help-button { width: 26px; height: 26px; border: 1px solid #86909c; border-radius: 4px; background: transparent; color: var(--color-text-2, #4e5969); cursor: help; font-weight: 600; }
+.filter-help-panel { position: absolute; top: 100%; right: 0; z-index: 100; width: min(510px, 82vw); max-height: 65vh; overflow: auto; padding: 16px; background: var(--color-bg-2, white); color: var(--color-text-1, #1d2129); border: 1px solid var(--color-border-2, #e5e6eb); border-radius: 6px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15); line-height: 1.7; font-size: 13px; }
+.filter-help-panel::before { content: ''; position: absolute; height: 10px; top: -10px; left: 0; right: 0; }
+.filter-help-panel p { margin: 7px 0; }
+.filter-help-panel code { overflow-wrap: anywhere; white-space: normal; }

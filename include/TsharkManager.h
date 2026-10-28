@@ -29,6 +29,7 @@
 #include "Logger.h"
 #include "MiscUtil.h"
 #include "TsharkDatabase.h"
+#include "AppConfig.h"
 #include "QueryCondition.h"
 
 enum WORK_STATUS {
@@ -44,6 +45,8 @@ public:
 	//完成各项工作的初始化
 	TsharkManager(std::string workDir);
 	~TsharkManager();
+	void getSettings(rapidjson::Document& document);
+	bool updateSettings(const rapidjson::Value& values, std::string& error);
 
 	//打印所有数据包信息
 	void printPacket(std::map<uint32_t, std::shared_ptr<Packet>> allPackets);
@@ -79,9 +82,11 @@ public:
 	
 	//获取所有网卡
 	std::vector<AdapterInfo> getNetworkAdapters();
+	std::vector<std::string> getTrendAdapterNames();
+	bool setTrendAdapterNames(const std::vector<std::string>& adapterNames, std::string& error);
 	
-	//开始监控所有网卡流量统计数据
-	void startMonitorAdaptersFlowTrend();
+		 //开始监控指定网卡流量统计数据
+		 void startMonitorAdaptersFlowTrend(const std::string& adapterName);
 
 	//停止监控所有网卡流量统计数据
 	void stopMonitorAdaptersFlowTread();
@@ -150,6 +155,9 @@ private:
 	//------------------------------------------------------在线抓包------------------------------------------------------------
 	//tshark路径
 	std::string tsharkPath;
+	AppConfig config;
+	std::string pcapDirectory;
+	void requireConfigured();
 
 	//pcap文件路径
 	std::string currentFilePath;

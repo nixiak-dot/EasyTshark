@@ -2,6 +2,7 @@ import { useState, forwardRef ,useEffect} from 'react';
 import { Table,Pagination,Button,Input } from '@arco-design/web-react';
 import { Resizable } from 'react-resizable';
 import useContentColumnWidths from './useContentColumnWidths';
+import FilterHelp from './FilterHelp';
 import dayjs from 'dayjs';
 import { apiPost } from '../Api.ts';
 const originColumns = [
@@ -229,7 +230,8 @@ function SessionPage(props) {
             onPressEnter={submitSearch}
           />
           <Button type='primary' onClick={submitSearch}>筛选</Button>
-          <Button onClick={clearSearch} disabled={!searchInput && !searchKeyword}>清除</Button>
+            <Button onClick={clearSearch} disabled={!searchInput && !searchKeyword}>清除</Button>
+            <FilterHelp scope='sessions' />
         </div>
       )}
       <div ref={tableRef} className="table-window table-window-session">

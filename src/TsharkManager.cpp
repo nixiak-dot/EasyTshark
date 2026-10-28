@@ -3,7 +3,7 @@
 #include <utility>
 
 
-TsharkManager::TsharkManager(std::string workDir) {
+TsharkManager::TsharkManager(std::string workDir) : config(workDir.empty() ? "." : workDir) {
 	this->workDir = std::move(workDir);
 	if (this->workDir.empty()) {
 		this->workDir = ".";
@@ -11,24 +11,9 @@ TsharkManager::TsharkManager(std::string workDir) {
 	if (this->workDir.back() != '\\' && this->workDir.back() != '/') {
 		this->workDir.push_back('/');
 	}
-	const std::filesystem::path workPath(this->workDir);
-	if (!std::filesystem::exists(workPath / "tshark") && std::filesystem::exists(workPath / ".." / "tshark")) {
-		this->workDir = (workPath / "..").lexically_normal().string();
-		if (this->workDir.back() != '\\' && this->workDir.back() != '/') {
-			this->workDir.push_back('/');
-		}
-	}
-
-	tsharkPath = this->workDir + "tshark/bin/tshark.exe";
-	editcapPath = this->workDir + "tshark/bin/editcap.exe";
-	if (!std::filesystem::exists(tsharkPath) && std::filesystem::exists("D:\\wireshark\\tshark.exe")) {
-		tsharkPath = "D:\\wireshark\\tshark.exe";
-	}
-	if (!std::filesystem::exists(editcapPath) && std::filesystem::exists("D:\\wireshark\\editcap.exe")) {
-		editcapPath = "D:\\wireshark\\editcap.exe";
-	}
-
-	std::filesystem::create_directories(this->workDir + "pcap");
+	tsharkPath = config.paths.tsharkPath;
+	editcapPath = config.paths.editcapPath;
+	pcapDirectory = config.paths.pcapDirectory;
 	std::string xdbPath = this->workDir + "ip2region.xdb";
 	if (!std::filesystem::exists(xdbPath)) {
 		xdbPath = this->workDir + "third_library/ip2region/ip2region.xdb";
@@ -42,6 +27,29 @@ TsharkManager::TsharkManager(std::string workDir) {
 
 TsharkManager::~TsharkManager() {
 	IP2RegionUtil::uninit();
+}
+
+void TsharkManager::getSettings(rapidjson::Document& document) {
+	std::lock_guard<std::recursive_mutex> lock(workStatusLock);
+	config.toJson(document);
+}
+
+bool TsharkManager::updateSettings(const rapidjson::Value& values, std::string& error) {
+	std::lock_guard<std::recursive_mutex> lock(workStatusLock);
+	if (workStatus != STATUS_IDLE) {
+		error = "请先停止抓包、文件分析或网卡监控，再保存路径设置";
+		return false;
+	}
+	AppPaths paths = config.paths;
+	if (!AppConfig::readPaths(values, paths, error) || !config.save(paths, error)) return false;
+	tsharkPath = paths.tsharkPath;
+	editcapPath = paths.editcapPath;
+	pcapDirectory = paths.pcapDirectory;
+	return true;
+}
+
+void TsharkManager::requireConfigured() {
+	if (!config.configured()) throw std::runtime_error("请先在设置界面完成有效的路径配置");
 }
 
 std::map<uint8_t, std::string> ipProtoMap = {
@@ -60,6 +68,8 @@ std::map<uint8_t, std::string> ipProtoMap = {
 //-----------------------------------动态在线抓包-----------------------------------
 //开始抓包
 bool TsharkManager::startCapture(std::string adapterName) {
+	std::lock_guard<std::recursive_mutex> lock(workStatusLock);
+	requireConfigured();
 
 	reset();
 	this->workStatus = STATUS_CAPTURING;
@@ -98,7 +108,7 @@ bool TsharkManager::stopCapture() {
 
 //动态在线抓包入口函数
 bool TsharkManager::capturePacketEntry(std::string adapterName) {
-	currentFilePath = workDir + "pcap/capture.pcap";
+	currentFilePath = (std::filesystem::u8path(pcapDirectory) / MiscUtil::getPcapNameByCurrentTimestamp()).u8string();
 	std::vector<std::string> tsharkArgs = {
 		"\"" + tsharkPath + "\"",
 		"-i","\""+adapterName + "\"",
@@ -445,7 +455,7 @@ bool TsharkManager::getPacketHexData(uint32_t frameNumber, std::vector<unsigned 
 
 
 	// 打开文件（以二进制模式）
-	std::ifstream file(currentFilePath, std::ios::binary);
+	std::ifstream file(std::filesystem::u8path(currentFilePath), std::ios::binary);
 	if (!file) {
 		std::cerr << "无法打开文件: " << currentFilePath << std::endl;
 		return false;
@@ -468,23 +478,17 @@ bool TsharkManager::getPacketHexData(uint32_t frameNumber, std::vector<unsigned 
 
 //以json形式输出数据包协议树
 bool TsharkManager::getPacketDetailInfo(uint32_t frameNumber, rapidjson::Document& detailJson) {
-	//通过editcap将某一帧数据包摘出来
-	std::string tmpFilePath = workDir + "pcap/detail_" + MiscUtil::getRandomString(10) + ".pcap";	//生成中间文件路径
-	std::string splitCmd = "\"" + editcapPath + "\" -r \"" + currentFilePath + "\" \"" + tmpFilePath + "\" " + std::to_string(frameNumber) + "-" + std::to_string(frameNumber);
-
-	if (!ProcessUtil::Exec(splitCmd)) {
-		Logger::LOG_ERROR("创建进程失败:", splitCmd);
-		remove(tmpFilePath.c_str());
+	std::lock_guard<std::recursive_mutex> lock(workStatusLock);
+	requireConfigured();
+	if (frameNumber == 0 || allPackets.find(frameNumber) == allPackets.end() || currentFilePath.empty()) {
 		return false;
 	}
 
-	//通过tshark获取指定数据报的详细信息,输出格式为xml
-	//使用的tshark命令为`tshark -r ${tmpFilePath} -T pdml`
-	std::string command = "\"" + tsharkPath + "\" -r \"" + tmpFilePath + "\" -T pdml";
-	std::unique_ptr<FILE, decltype(&_pclose)> pipe(ProcessUtil::popenEx(command), _pclose);
+	std::string command = "\"" + tsharkPath + "\" -2 -r \"" + currentFilePath
+		+ "\" -Y \"frame.number == " + std::to_string(frameNumber) + "\" -T pdml";
+	std::unique_ptr<FILE, decltype(&_pclose)> pipe(ProcessUtil::popenEx(command, nullptr, false), _pclose);
 	if (!pipe) {
 		Logger::LOG_ERROR("管道创建失败,命令:{}",command);
-		remove(tmpFilePath.c_str());
 		return false;
 	}
 
@@ -497,8 +501,6 @@ bool TsharkManager::getPacketDetailInfo(uint32_t frameNumber, rapidjson::Documen
 		memset(buffer,0,sizeof(buffer));
 	}
 
-	remove(tmpFilePath.c_str());
-
 	//将数据包转化为xml
 	// 将xml内容转换为JSON
 	if (!MiscUtil::xml2JSON(result, detailJson)) {
@@ -508,7 +510,8 @@ bool TsharkManager::getPacketDetailInfo(uint32_t frameNumber, rapidjson::Documen
 
 	// 将xml内容转换为JSON
 	// 将原始十六进制数据插入进去
-	if (detailJson.HasMember("pdml") && detailJson["pdml"].HasMember("packet")) {
+	if (detailJson.HasMember("pdml") && detailJson["pdml"].HasMember("packet")
+		&& detailJson["pdml"]["packet"].IsArray() && detailJson["pdml"]["packet"].Size() == 1) {
 		std::string packetHex;
 		std::vector<unsigned char> packetData;
 		if (getPacketHexData(frameNumber, packetData)) {
@@ -542,24 +545,24 @@ bool TsharkManager::getPacketDetailInfo(uint32_t frameNumber, rapidjson::Documen
 //-------------------------------------------------静态Pcap文件分析-----------------------------------------------------
 
 bool TsharkManager::convertToPcap(const std::string& inputPath, const std::string& outputPath) {
-	if (!std::filesystem::is_regular_file(inputPath)) {
+	if (!std::filesystem::is_regular_file(std::filesystem::u8path(inputPath))) {
 		Logger::LOG_ERROR("离线分析文件不存在: {}", inputPath);
 		return false;
 	}
 
-	const std::filesystem::path destination(outputPath);
+	const auto destination = std::filesystem::u8path(outputPath);
 	if (destination.has_parent_path()) {
 		std::filesystem::create_directories(destination.parent_path());
 	}
 
-	std::string extension = std::filesystem::path(inputPath).extension().string();
+	std::string extension = std::filesystem::u8path(inputPath).extension().string();
 	std::transform(extension.begin(), extension.end(), extension.begin(),
 		[](unsigned char value) { return static_cast<char>(std::tolower(value)); });
 	if (extension == ".pcap") {
 		return MiscUtil::copyFile(inputPath, outputPath);
 	}
 
-	if (editcapPath.empty() || !std::filesystem::is_regular_file(editcapPath)) {
+	if (editcapPath.empty() || !std::filesystem::is_regular_file(std::filesystem::u8path(editcapPath))) {
 		Logger::LOG_ERROR("找不到 editcap，无法将 {} 转换为 pcap", inputPath);
 		return false;
 	}
@@ -569,17 +572,21 @@ bool TsharkManager::convertToPcap(const std::string& inputPath, const std::strin
 		Logger::LOG_ERROR("转换 pcap 失败: {}", command);
 		return false;
 	}
-	return std::filesystem::is_regular_file(outputPath);
+	return std::filesystem::is_regular_file(std::filesystem::u8path(outputPath));
 }
 
 //静态pcap文件分析入口函数
 bool TsharkManager::analysisFile(std::string pcapFilePath) {
-
-	reset();
-
-	currentFilePath = workDir + "pcap/" + MiscUtil::getPcapNameByCurrentTimestamp();
+	{
+		std::lock_guard<std::recursive_mutex> lock(workStatusLock);
+		requireConfigured();
+		reset();
+		currentFilePath = (std::filesystem::u8path(pcapDirectory) / MiscUtil::getPcapNameByCurrentTimestamp()).u8string();
+		this->workStatus = STATUS_ANALYSIS_FILE;
+	}
 	if (!convertToPcap(pcapFilePath, currentFilePath)) {
 		currentFilePath.clear();
+		this->workStatus = STATUS_IDLE;
 		return false;
 	}
 
@@ -749,6 +756,8 @@ void TsharkManager::analyseProcessPacket(std::shared_ptr<Packet> packet) {
 //-------------------------------------------------流量监控-----------------------------------------------------
 //获取所有网卡列表
 std::vector<AdapterInfo> TsharkManager::getNetworkAdapters() {
+	std::lock_guard<std::recursive_mutex> statusLock(workStatusLock);
+	requireConfigured();
 	//过滤掉特殊网卡
 	std::set<std::string> specialAdapters = { "sshdump", "ciscodump", "udpdump", "randpkt","wifidump","etwdump","\\\\.\\USBPcap1","\\\\.\\USBPcap2"};
 
@@ -763,6 +772,9 @@ std::vector<AdapterInfo> TsharkManager::getNetworkAdapters() {
 	std::string command = "\"" + tsharkPath + "\" -D";
 	PID_T* tsharkPid = nullptr;
 	FILE* pipe = ProcessUtil::popenEx(command,tsharkPid);
+	if (!pipe) {
+		throw std::runtime_error("Unable to enumerate network adapters");
+	}
 
 	//读取tshark输出
 	while (fgets(buffer,256,pipe) != nullptr) {
@@ -809,66 +821,112 @@ std::vector<AdapterInfo> TsharkManager::getNetworkAdapters() {
 
 }
 
-void TsharkManager::startMonitorAdaptersFlowTrend() {
+std::vector<std::string> TsharkManager::getTrendAdapterNames() {
+	std::lock_guard<std::recursive_mutex> lock(workStatusLock);
+	return config.paths.trendAdapterNames;
+}
 
-	reset();
-
-	workStatus = STATUS_MONITORING;
-
-	std::unique_lock<std::recursive_mutex> lock(adapterFlowTrendMapLock);
-
-	adapterFlowTrendMonitorStartTime = time(nullptr);
-
-	//获取网卡列表
-	std::vector<AdapterInfo> adapterList = getNetworkAdapters();
-
-	//为每一个网卡创建线程
-	for (auto adapter:adapterList) {
-
-		adapterFlowTrendMonitorMap.insert(std::make_pair<>(adapter.name, AdapterMonitorInfo()));
-		AdapterMonitorInfo& monitorInfo = adapterFlowTrendMonitorMap.at(adapter.name);
-
-		monitorInfo.monitorThread = std::make_shared<std::thread>(&TsharkManager::adapterFlowTrendMonitorThreadEntry, this, adapter.name);
-		if (monitorInfo.monitorThread == nullptr) {
-			Logger::LOG_ERROR("线程创建失败:{}",adapter.name);
+bool TsharkManager::setTrendAdapterNames(const std::vector<std::string>& adapterNames, std::string& error) {
+	std::lock_guard<std::recursive_mutex> lock(workStatusLock);
+	if (workStatus != STATUS_IDLE && workStatus != STATUS_MONITORING) {
+		error = "system is busy!";
+		return false;
+	}
+	const auto adapters = getNetworkAdapters();
+	std::set<std::string> availableNames;
+	for (const auto& adapter : adapters) availableNames.insert(adapter.name);
+	std::vector<std::string> selected;
+	for (const auto& adapterName : adapterNames) {
+		if (availableNames.find(adapterName) == availableNames.end()) {
+			error = "A selected adapter is not available";
+			return false;
 		}
-		else {
-			Logger::LOG_INFO("监控线程创建成功,网卡名:{},",adapter.name);
-		}
+		if (std::find(selected.begin(), selected.end(), adapterName) == selected.end()) selected.push_back(adapterName);
+	}
+	AppPaths paths = config.paths;
+	paths.trendAdapterNames = std::move(selected);
+	return config.save(paths, error);
+}
+
+void TsharkManager::startMonitorAdaptersFlowTrend(const std::string& adapterName) {
+	std::lock_guard<std::recursive_mutex> statusLock(workStatusLock);
+	requireConfigured();
+	if (adapterName.empty()) throw std::invalid_argument("Adapter name is required");
+	if (workStatus != STATUS_IDLE && workStatus != STATUS_MONITORING) throw std::runtime_error("system is busy!");
+
+	const auto adapters = getNetworkAdapters();
+	const auto adapter = std::find_if(adapters.begin(), adapters.end(), [&adapterName](const AdapterInfo& item) {
+		return item.name == adapterName;
+	});
+	if (adapter == adapters.end()) throw std::invalid_argument("The requested adapter was not found");
+
+	std::lock_guard<std::recursive_mutex> lock(adapterFlowTrendMapLock);
+	if (adapterFlowTrendMonitorMap.find(adapterName) != adapterFlowTrendMonitorMap.end()) return;
+	if (workStatus == STATUS_IDLE) {
+		adapterFlowTrendMonitorStartTime = time(nullptr);
+		workStatus = STATUS_MONITORING;
 	}
 
+	auto inserted = adapterFlowTrendMonitorMap.emplace(adapterName, AdapterMonitorInfo());
+	inserted.first->second.adapterName = adapterName;
+	try {
+		inserted.first->second.monitorThread = std::make_shared<std::thread>(
+			&TsharkManager::adapterFlowTrendMonitorThreadEntry, this, adapterName);
+	}
+	catch (...) {
+		adapterFlowTrendMonitorMap.erase(inserted.first);
+		if (adapterFlowTrendMonitorMap.empty()) workStatus = STATUS_IDLE;
+		throw;
+	}
+	Logger::LOG_INFO("Started trend monitor for adapter {}", adapterName);
 }
 
 void TsharkManager::adapterFlowTrendMonitorThreadEntry(std::string adapterName) {
 
-	adapterFlowTrendMapLock.lock();
-	if (adapterFlowTrendMonitorMap.find(adapterName) == adapterFlowTrendMonitorMap.end()) {
-		adapterFlowTrendMapLock.unlock();
-		return;
+	{
+		std::lock_guard<std::recursive_mutex> lock(adapterFlowTrendMapLock);
+		auto monitorInfo = adapterFlowTrendMonitorMap.find(adapterName);
+		if (monitorInfo == adapterFlowTrendMonitorMap.end() || monitorInfo->second.stopRequested) {
+			return;
+		}
 	}
-	adapterFlowTrendMapLock.unlock();
 
 	char buffer[256] = { 0 };
-	std::map<time_t, long>& trafficPerSecond = adapterFlowTrendMonitorMap[adapterName].flowThrendData;
 
-	//tshark命令
 	std::string tsharkCmd = "\"" + tsharkPath + "\" -i\"" + adapterName + "\" -T fields -e frame.time_epoch -e frame.len";
-	Logger::LOG_INFO("启动网卡流量监控{}",tsharkCmd);
+	Logger::LOG_INFO("启动网卡流量监控{}", tsharkCmd);
 
 	PID_T tsharkPid = 0;
 	FILE* pipe = ProcessUtil::popenEx(tsharkCmd.c_str(), &tsharkPid);
 	if (!pipe) {
-		throw std::runtime_error("Failed to run tshark command!");
+		if (tsharkPid != 0) {
+			ProcessUtil::kill(tsharkPid);
+		}
+		Logger::LOG_ERROR("Failed to run tshark command for adapter {}", adapterName);
+		std::lock_guard<std::recursive_mutex> lock(adapterFlowTrendMapLock);
+		auto monitorInfo = adapterFlowTrendMonitorMap.find(adapterName);
+		if (monitorInfo != adapterFlowTrendMonitorMap.end()) monitorInfo->second.stopRequested = true;
+		return;
 	}
 
-	//保存管道
-	adapterFlowTrendMapLock.lock();
-	adapterFlowTrendMonitorMap[adapterName].monitorTsharkPipe = pipe;
-	adapterFlowTrendMonitorMap[adapterName].tsharkPid = tsharkPid;
-	adapterFlowTrendMapLock.unlock();
+	bool stopRequested = false;
+	{
+		std::lock_guard<std::recursive_mutex> lock(adapterFlowTrendMapLock);
+		auto monitorInfo = adapterFlowTrendMonitorMap.find(adapterName);
+		if (monitorInfo == adapterFlowTrendMonitorMap.end()) {
+			stopRequested = true;
+		}
+		else {
+			monitorInfo->second.monitorTsharkPipe = pipe;
+			monitorInfo->second.tsharkPid = tsharkPid;
+			stopRequested = monitorInfo->second.stopRequested;
+		}
+	}
+	if (stopRequested) {
+		ProcessUtil::kill(tsharkPid);
+	}
 
-	//逐行读取tshark输出
-	while (fgets(buffer,256,pipe) != nullptr) {
+	while (fgets(buffer, 256, pipe) != nullptr) {
 		std::string line(buffer);
 		std::istringstream iss(line);
 		std::string timestampStr, lengthStr;
@@ -877,76 +935,80 @@ void TsharkManager::adapterFlowTrendMonitorThreadEntry(std::string adapterName) 
 			continue;
 		}
 
-		//解析每行的时间和数据包长度
 		if (!(iss >> timestampStr >> lengthStr)) {
 			continue;
 		}
 
 		try {
-			// 转换时间戳为long类型，秒数部分
 			long timestamp = static_cast<long>(std::stod(timestampStr));
-
-			// 转换数据包长度为long类型
 			long packetLength = std::stol(lengthStr);
 
-			// 每秒的字节数累加
+			std::lock_guard<std::recursive_mutex> lock(adapterFlowTrendMapLock);
+			auto monitorInfo = adapterFlowTrendMonitorMap.find(adapterName);
+			if (monitorInfo == adapterFlowTrendMonitorMap.end() || monitorInfo->second.stopRequested) break;
+			auto& trafficPerSecond = monitorInfo->second.flowThrendData;
 			trafficPerSecond[timestamp] += packetLength;
-
-			//超过300秒的部分删除
 			while (trafficPerSecond.size() > 300) {
-				auto it = trafficPerSecond.begin();
-				trafficPerSecond.erase(it);
+				trafficPerSecond.erase(trafficPerSecond.begin());
 			}
-
 		}
-		catch (const std::exception& e){
-			Logger::LOG_ERROR("Error parsing line:{},{}",line,e.what());
+		catch (const std::exception& e) {
+			Logger::LOG_ERROR("Error parsing line:{},{}", line, e.what());
+		}
+	}
+
+	fclose(pipe);
+	{
+		std::lock_guard<std::recursive_mutex> lock(adapterFlowTrendMapLock);
+		auto monitorInfo = adapterFlowTrendMonitorMap.find(adapterName);
+		if (monitorInfo != adapterFlowTrendMonitorMap.end() && monitorInfo->second.monitorTsharkPipe == pipe) {
+			monitorInfo->second.monitorTsharkPipe = nullptr;
+			monitorInfo->second.tsharkPid = 0;
 		}
 	}
 
 	Logger::LOG_INFO("adapterFlowTrendMonitorThreadEntry 已结束");
-
 }
 
 void TsharkManager::stopMonitorAdaptersFlowTread() {
-	std::unique_lock<std::recursive_mutex> lock(adapterFlowTrendMapLock);
+	std::lock_guard<std::recursive_mutex> statusLock(workStatusLock);
+	if (workStatus == STATUS_CAPTURING || workStatus == STATUS_ANALYSIS_FILE) {
+		throw std::runtime_error("system is busy!");
+	}
+	std::vector<std::shared_ptr<std::thread>> monitorThreads;
 
-	// 先杀死对应的tshark进程
-	for (auto adapterPipePair : adapterFlowTrendMonitorMap) {
-		if (adapterPipePair.second.tsharkPid != 0) {
-			ProcessUtil::kill(adapterPipePair.second.tsharkPid);
+	{
+		std::lock_guard<std::recursive_mutex> lock(adapterFlowTrendMapLock);
+		for (auto& adapterPipePair : adapterFlowTrendMonitorMap) {
+			adapterPipePair.second.stopRequested = true;
+			if (adapterPipePair.second.tsharkPid != 0) {
+				ProcessUtil::kill(adapterPipePair.second.tsharkPid);
+			}
+			if (adapterPipePair.second.monitorThread) {
+				monitorThreads.push_back(adapterPipePair.second.monitorThread);
+			}
 		}
 	}
 
-	// 然后关闭管道
-	for (auto adapterPipePair : adapterFlowTrendMonitorMap) {
-
-		// 然后关闭管道
-		if (adapterPipePair.second.monitorTsharkPipe != nullptr) {
-			_pclose(adapterPipePair.second.monitorTsharkPipe);
+	for (const auto& monitorThread : monitorThreads) {
+		if (monitorThread->joinable()) {
+			monitorThread->join();
 		}
-
-		// 最后等待对应线程退出
-		if (adapterPipePair.second.monitorThread && adapterPipePair.second.monitorThread->joinable()) {
-			adapterPipePair.second.monitorThread->join();
-		}
-
-		Logger::LOG_INFO("网卡{}已停止流量监控",adapterPipePair.first);
 	}
 
-	// 清空记录的流量趋势数据
-	adapterFlowTrendMonitorMap.clear();
+	{
+		std::lock_guard<std::recursive_mutex> lock(adapterFlowTrendMapLock);
+		adapterFlowTrendMonitorMap.clear();
+	}
 
-	//恢复状态
 	workStatus = STATUS_IDLE;
 }
 
 void TsharkManager::getAdaptersFlowTrendData(std::map<std::string,std::map<time_t,long>>& flowTrendData) {
+	std::lock_guard<std::recursive_mutex> lock(adapterFlowTrendMapLock);
 	time_t timeNow = time(nullptr);
 	time_t startWindow = timeNow - adapterFlowTrendMonitorStartTime > 300 ? timeNow - 300 : adapterFlowTrendMonitorStartTime;
 	time_t endWindow = timeNow - adapterFlowTrendMonitorStartTime > 300 ? timeNow : adapterFlowTrendMonitorStartTime + 300;
-
-	adapterFlowTrendMapLock.lock();
 	for (auto adapterPipePair : adapterFlowTrendMonitorMap) {
 		flowTrendData.insert(std::make_pair<>(adapterPipePair.first,std::map<time_t,long>()));
 
@@ -960,8 +1022,6 @@ void TsharkManager::getAdaptersFlowTrendData(std::map<std::string,std::map<time_
 			}
 		}
 	}
-	adapterFlowTrendMapLock.unlock();
-
 }
 
 
@@ -1139,6 +1199,8 @@ void TsharkManager::querySessions(QueryCondition& condition, std::vector<std::sh
 }
 
 DataStreamCountInfo TsharkManager::getSessionDataStream(uint32_t sessionId, std::vector<DataStreamItem>& dataStreamList) {
+	std::lock_guard<std::recursive_mutex> lock(workStatusLock);
+	requireConfigured();
 	
 	DataStreamCountInfo countInfo;
 	if (sessionIdMap.find(sessionId) == sessionIdMap.end()) {

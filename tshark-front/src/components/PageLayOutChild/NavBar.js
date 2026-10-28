@@ -64,13 +64,16 @@ function NavBar() {
       Message.error('请在 Electron 中运行');
       return;
     }
-    const savePath = await window.electronAPI.showSavePath();
-    if (!savePath) return;
     try {
-      await apiPost('/api/savePacket', { savePath });
+      const settings = await apiGet('/api/settings');
+      if (String(settings?.code) !== '200' || !settings.data?.configured) throw new Error('请先完成路径设置');
+      const savePath = await window.electronAPI.showSavePath(settings.data.values.pcapDirectory);
+      if (!savePath) return;
+      const result = await apiPost('/api/savePacket', { savePath });
+      if (String(result?.code) !== '200') throw new Error(result?.msg || '文件保存失败');
       Message.success('文件保存完成');
     } catch (error) {
-      Message.error(error?.response?.data?.msg || '文件保存失败');
+      Message.error(error?.response?.data?.msg || error.message || '文件保存失败');
     }
   };
 

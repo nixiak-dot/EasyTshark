@@ -186,6 +186,9 @@
     <ClInclude Include="include\StatsSQL.h" />
     <ClInclude Include="include\TsharkDatabase.h" />
     <ClInclude Include="include\TsharkManager.h" />
+    <ClInclude Include="include\AppConfig.h" />
+    <ClInclude Include="include\PathDialog.h" />
+    <ClInclude Include="include\Controller\SettingsController.h" />
     <ClInclude Include="include\TrafficFilter.h" />
     <ClInclude Include="include\tshark_datatype.h" />
     <ClInclude Include="include\Logger.h" />

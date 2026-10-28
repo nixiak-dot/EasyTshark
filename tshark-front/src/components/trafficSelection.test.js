@@ -3,16 +3,17 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import DataPacketPage from './DataPacketPage';
 import SessionPage from './SessionPage';
 import { apiGet, apiPost } from '../Api.ts';
+import useContentColumnWidths from './useContentColumnWidths';
 
 jest.mock('../Api.ts', () => ({ apiGet: jest.fn(), apiPost: jest.fn() }));
 jest.mock('./useContentColumnWidths', () => ({
   __esModule: true,
-  default: () => ({ current: null }),
+  default: jest.fn(() => ({ current: null })),
 }));
 jest.mock('react-resizable', () => ({ Resizable: ({ children }) => children }));
 jest.mock('@arco-design/web-react', () => ({
-  Table: ({ data, rowKey, rowClassName, onRow }) => (
-    <div>{data.map((record) => (
+  Table: ({ data, rowKey, rowClassName, onRow, loading }) => (
+    <div data-testid='traffic-table' data-loading={String(Boolean(loading))}>{data.map((record) => (
       <button
         key={record[rowKey]}
         data-testid={`row-${record[rowKey]}`}
@@ -24,7 +25,7 @@ jest.mock('@arco-design/web-react', () => ({
   Pagination: ({ current, onChange }) => (
     <button onClick={() => onChange(current + 1)}>Next page</button>
   ),
-  Tree: () => null,
+  Tree: ({ treeData }) => <div data-testid='protocol-tree'>{JSON.stringify(treeData)}</div>,
   Input: ({ value, onChange, onPressEnter, placeholder }) => (
     <input
       value={value}
@@ -63,6 +64,47 @@ afterEach(() => {
   jest.clearAllMocks();
 });
 
+test('packet details display nested application-layer fields and repeated answers', async () => {
+  const originalImplementation = apiPost.getMockImplementation();
+  apiPost.mockImplementation(async (path, ...args) => path === '/api/getPacketDetail'
+    ? { data: { proto: [{ name: 'dns', children: [{ name: 'Answers', children: [
+      { name: 'dns.a', show: '192.0.2.1', hide: 'yes' },
+      { name: 'dns.a', show: '192.0.2.2' },
+    ] }] }], hexdata: '00010203' } }
+    : originalImplementation(path, ...args));
+  render(<DataPacketPage {...packetProps} />);
+  await waitFor(() => expect(screen.getByTestId('protocol-tree')).toHaveTextContent('dns.a: 192.0.2.2'));
+  const tree = JSON.parse(screen.getByTestId('protocol-tree').textContent);
+  expect(tree[0].children[0].children).toHaveLength(2);
+  expect(tree[0].children[0].children[0].hide).toBe('yes');
+});
+
+test('packet detail failures clear the old tree and display an error', async () => {
+  const originalImplementation = apiPost.getMockImplementation();
+  apiPost.mockImplementation(async (path, ...args) => path === '/api/getPacketDetail'
+    ? { code: '400', msg: 'packet detail analysis failed' }
+    : originalImplementation(path, ...args));
+  render(<DataPacketPage {...packetProps} />);
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('无法解析数据包详情'));
+  expect(screen.getByTestId('protocol-tree')).toHaveTextContent('[]');
+});
+
+test('late detail responses cannot replace the currently selected packet tree', async () => {
+  let resolveFirst;
+  const originalImplementation = apiPost.getMockImplementation();
+  apiPost.mockImplementation((path, payload, ...args) => {
+    if (path !== '/api/getPacketDetail') return originalImplementation(path, payload, ...args);
+    if (payload.frameNumber === 1) return new Promise((resolve) => { resolveFirst = resolve; });
+    return Promise.resolve({ data: { proto: [{ name: 'http', showname: 'Selected HTTP packet' }], hexdata: '' } });
+  });
+  render(<DataPacketPage {...packetProps} />);
+  fireEvent.click(await screen.findByTestId('row-2'));
+  await waitFor(() => expect(screen.getByTestId('protocol-tree')).toHaveTextContent('Selected HTTP packet'));
+  await act(async () => resolveFirst({ data: { proto: [{ name: 'dns', showname: 'Old DNS packet' }], hexdata: '' } }));
+  expect(screen.getByTestId('protocol-tree')).toHaveTextContent('Selected HTTP packet');
+  expect(screen.getByTestId('protocol-tree')).not.toHaveTextContent('Old DNS packet');
+});
+
 test('active capture polling retains the selected packet across multiple ticks', async () => {
   jest.useFakeTimers();
   apiGet.mockResolvedValue({ code: '200', data: { status: 2 } });
@@ -76,6 +118,77 @@ test('active capture polling retains the selected packet across multiple ticks',
   await act(async () => { jest.advanceTimersByTime(3000); });
   expect(screen.getByTestId('row-2')).toHaveClass('selected-row');
   expect(screen.getByTestId('row-5')).toBeInTheDocument();
+});
+
+test('packet background polling stays silent, reuses unchanged rows, and waits for pending requests', async () => {
+  jest.useFakeTimers();
+  apiGet.mockResolvedValue({ code: 200, data: { status: 2 } });
+  render(<DataPacketPage {...packetProps} />);
+  await act(async () => {});
+  const initialRows = useContentColumnWidths.mock.calls.at(-1)[0];
+  let finishRefresh;
+  apiPost.mockImplementationOnce(() => new Promise((resolve) => { finishRefresh = resolve; }));
+  await act(async () => { jest.advanceTimersByTime(3000); });
+  expect(screen.getByTestId('traffic-table')).toHaveAttribute('data-loading', 'false');
+  const requestCount = apiPost.mock.calls.filter(([path]) => path === '/api/queryPacket').length;
+  await act(async () => { jest.advanceTimersByTime(9000); });
+  expect(apiPost.mock.calls.filter(([path]) => path === '/api/queryPacket')).toHaveLength(requestCount);
+  await act(async () => { finishRefresh({ data: packets([1, 2, 3]), total: 3 }); });
+  expect(useContentColumnWidths.mock.calls.at(-1)[0]).toBe(initialRows);
+});
+
+test('packet polling uses the current page after pagination changes', async () => {
+  jest.useFakeTimers();
+  apiGet.mockResolvedValue({ code: '200', data: { status: 2 } });
+  render(<DataPacketPage {...packetProps} />);
+  await act(async () => {});
+  fireEvent.click(screen.getByText('Next page'));
+  await act(async () => {});
+  const requestCount = apiPost.mock.calls.filter(([path]) => path === '/api/queryPacket').length;
+  await act(async () => { jest.advanceTimersByTime(3000); });
+  const queries = apiPost.mock.calls.filter(([path]) => path === '/api/queryPacket');
+  expect(queries).toHaveLength(requestCount + 1);
+  expect(queries.at(-1)[1].pageNum).toBe(2);
+});
+
+test('late packet page responses cannot replace the latest page', async () => {
+  let finishFirstPage;
+  const originalImplementation = apiPost.getMockImplementation();
+  apiPost.mockImplementation((path, payload) => {
+    if (path !== '/api/queryPacket') return originalImplementation(path, payload);
+    if (payload.pageNum === 1) return new Promise((resolve) => { finishFirstPage = resolve; });
+    return Promise.resolve({ data: packets([31, 32]), total: 32 });
+  });
+  render(<DataPacketPage {...packetProps} />);
+  fireEvent.click(screen.getByText('Next page'));
+  await screen.findByTestId('row-31');
+  await act(async () => { finishFirstPage({ data: packets([1, 2]), total: 32 }); });
+  expect(screen.getByTestId('row-31')).toBeInTheDocument();
+  expect(screen.queryByTestId('row-1')).not.toBeInTheDocument();
+});
+
+test('duplicate packet queries share a request and failures release loading for retry', async () => {
+  const ref = createRef();
+  const logError = jest.spyOn(console, 'error').mockImplementation(() => {});
+  render(<DataPacketPage {...packetProps} ref={ref} />);
+  await screen.findByTestId('row-1');
+  let failRefresh;
+  apiPost.mockImplementationOnce(() => new Promise((resolve, reject) => { failRefresh = reject; }));
+  const requestCount = apiPost.mock.calls.filter(([path]) => path === '/api/queryPacket').length;
+  let firstRefresh;
+  let secondRefresh;
+  act(() => {
+    firstRefresh = ref.current.loadData();
+    secondRefresh = ref.current.loadData();
+  });
+  expect(firstRefresh).toBe(secondRefresh);
+  expect(apiPost.mock.calls.filter(([path]) => path === '/api/queryPacket')).toHaveLength(requestCount + 1);
+  await act(async () => { failRefresh(new Error('network error')); await firstRefresh; });
+  expect(screen.getByTestId('traffic-table')).toHaveAttribute('data-loading', 'false');
+  expect(screen.getByRole('alert')).toHaveTextContent('数据包列表加载失败');
+  await act(async () => { await ref.current.loadData(); });
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(logError).toHaveBeenCalled();
 });
 
 test('packet refresh keeps the clicked row and its detail instead of selecting the first row', async () => {

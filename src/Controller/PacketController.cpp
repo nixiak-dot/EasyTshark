@@ -69,7 +69,7 @@ void PacketController::analyseFile(const httplib::Request& request, httplib::Res
 
         //检查文件是否存在
         auto fileExists = [](const std::string& filePath) -> bool {
-            std::ifstream infile(filePath.c_str());
+            std::ifstream infile(std::filesystem::u8path(filePath));
             return infile.good();
             };
 
@@ -106,11 +106,17 @@ void PacketController::getPacketDetail(const httplib::Request& request, httplib:
         }
 
         // 提取数据包编号参数
-        uint32_t frameNumber = doc["frameNumber"].GetInt();
+        if (!doc.IsObject() || !doc.HasMember("frameNumber") || !doc["frameNumber"].IsUint()
+            || doc["frameNumber"].GetUint() == 0) {
+            return sendErrorResponse(response, "invalid frameNumber");
+        }
+        uint32_t frameNumber = doc["frameNumber"].GetUint();
 
         // 获取数据包详情
         rapidjson::Document dataDoc;
-        __tsharkManager->getPacketDetailInfo(frameNumber, dataDoc);
+        if (!__tsharkManager->getPacketDetailInfo(frameNumber, dataDoc)) {
+            return sendErrorResponse(response, "packet detail analysis failed");
+        }
 
         sendJsonResponse(response, dataDoc);
     }

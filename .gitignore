@@ -20,6 +20,8 @@ pcap/
 DvlErrLog.txt
 
 # Local databases and generated check data
+config/settings.json
+config/settings.json.tmp
 *.db
 *.db-shm
 *.db-wal

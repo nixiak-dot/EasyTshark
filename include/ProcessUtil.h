@@ -76,7 +76,7 @@ public:
     }
 
     //创建管道
-    static FILE* popenEx(std::string command, PID_T* pidOut = nullptr) {
+    static FILE* popenEx(std::string command, PID_T* pidOut = nullptr, bool mergeStderr = true) {
         HANDLE hReadPipe, hWritePipe;
         SECURITY_ATTRIBUTES seAttr;
         STARTUPINFOW si;
@@ -104,7 +104,7 @@ public:
         ZeroMemory(&pi, sizeof(pi));
         si.cb = sizeof(si);
         si.hStdOutput = hWritePipe;
-        si.hStdError = hWritePipe;
+        si.hStdError = mergeStderr ? hWritePipe : GetStdHandle(STD_ERROR_HANDLE);
         si.dwFlags |= STARTF_USESTDHANDLES;
 
         // 将 UTF-8 字符串转换为 UTF-16（wstring）

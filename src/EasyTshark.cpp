@@ -20,6 +20,7 @@
 #include "PacketController.h"
 #include "SessionController.h"
 #include "StatsController.h"
+#include "SettingsController.h"
 
 #include "httplib/httplib.h"
 //#include <websocketpp/config/asio_no_tls.hpp>
@@ -106,6 +107,7 @@ int main(int argc, char* argv[]) {
     HttpServer.set_post_routing_handler(after_response);
 
     std::vector<std::shared_ptr<BaseController>> controllerList;
+    controllerList.push_back(std::make_shared<SettingsController>(HttpServer, tsharkManager));
     controllerList.push_back(std::make_shared<PacketController>(HttpServer, tsharkManager));
     controllerList.push_back(std::make_shared<SessionController>(HttpServer, tsharkManager));
     controllerList.push_back(std::make_shared<AdapterController>(HttpServer, tsharkManager));

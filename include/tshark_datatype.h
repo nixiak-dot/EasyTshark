@@ -253,4 +253,5 @@ public:
     std::shared_ptr<std::thread> monitorThread;
     FILE* monitorTsharkPipe;
     PID_T tsharkPid;
+    bool stopRequested = false;
 };

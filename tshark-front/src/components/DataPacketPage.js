@@ -1,7 +1,9 @@
-import { useState, forwardRef ,useEffect,useImperativeHandle,useRef} from 'react';
+import { useState, forwardRef ,useEffect,useImperativeHandle,useRef,useCallback} from 'react';
 import { Table,Pagination,Tree,Input,Button } from '@arco-design/web-react';
 import { Resizable } from 'react-resizable';
 import useContentColumnWidths from './useContentColumnWidths';
+import FilterHelp from './FilterHelp';
+import { buildProtocolTree, packetByteRange } from './packetProtocolTree';
 import dayjs from 'dayjs';
 import { apiPost,apiGet } from '../Api.ts';
 import { hexCharCodeToStr, strTwoSplit, isInteger, padNumber } from '../util.ts'
@@ -121,10 +123,12 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
   const [dataList, setDataList] = useState([])
   const [searchInput, setSearchInput] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
-  const searchKeywordRef = useRef(searchKeyword);
-  searchKeywordRef.current = searchKeyword;
+  const pendingRequestRef = useRef(null);
+  const requestIdRef = useRef(0);
+  const [listError, setListError] = useState('');
 
   const [treeData,setTreeData] = useState([]);
+  const [detailError, setDetailError] = useState('');
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [currentRowId,setCurrentRowId] = useState(1);
 
@@ -135,8 +139,6 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
   const [selectedLeftHex, setSelectedLeftHex] = useState([])
   const [selectedRightHex, setSelectedRightHex] = useState([])
 
-  const [workStatus, setWorkStatus] = useState(0); // 新增：工作状态
-  const timeRef = useRef(null);
   const INTERVAL = 3000;
   const STATUS_CHECK_INTERVAL = 5000; 
 
@@ -151,29 +153,56 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
     setSearchKeyword('');
   };
 
-  const loadData = async ()=>{
-    setLoading(true);
-
-    let sessionId = 0;
-    if(props.match.params.type === 'detail'){
-      sessionId = parseInt(props.match.params.sessionId)
+  const packetType = props.match.params.type;
+  const packetSessionId = props.match.params.sessionId;
+  const loadData = useCallback(({ silent = false } = {}) => {
+    const payload = {
+      pageSize,
+      pageNum: currentPage,
+      session_id: packetType === 'detail' ? parseInt(packetSessionId) : 0,
+      filterExpression: searchKeyword,
+    };
+    const key = JSON.stringify([payload, reloadCount]);
+    if (pendingRequestRef.current?.key === key) return pendingRequestRef.current.promise;
+    const requestId = ++requestIdRef.current;
+    const request = { key, promise: null };
+    pendingRequestRef.current = request;
+    if (!silent) {
+      setLoading(true);
+      setListError('');
     }
+    request.promise = (async () => {
+      try {
+        const response = await apiPost('/api/queryPacket', payload);
+        if (requestId !== requestIdRef.current) return;
+        if (!Array.isArray(response?.data) || (response.code !== undefined && String(response.code) !== '200')) {
+          throw new Error(response?.msg || '数据包列表加载失败');
+        }
+        setDataList((previous) => JSON.stringify(previous) === JSON.stringify(response.data) ? previous : response.data);
+        setTotal(response.total);
+        setListError('');
+      } catch (error) {
+        if (requestId === requestIdRef.current) {
+          if (!silent) setListError('数据包列表加载失败，请重试。');
+          console.error('Failed to refresh packets:', error);
+        }
+      } finally {
+        if (requestId === requestIdRef.current) {
+          pendingRequestRef.current = null;
+          setLoading(false);
+        }
+      }
+    })();
+    return request.promise;
+  }, [currentPage, pageSize, packetType, packetSessionId, searchKeyword, reloadCount]);
 
-    const _data = await apiPost('/api/queryPacket',{
-      "pageSize":pageSize,
-      "pageNum":currentPage,
-      "session_id":sessionId,
-      "filterExpression":searchKeywordRef.current
-    })
-    console.log(_data.data)
-    setDataList(_data.data)
-    setTotal(_data.total)
-    setLoading(false);
-  }
-
-  useEffect(()=>{
+  useEffect(() => {
     loadData();
-  },[currentPage, pageSize, props.match.params.type, props.match.params.sessionId, searchKeyword]);
+    return () => {
+      requestIdRef.current += 1;
+      pendingRequestRef.current = null;
+    };
+  }, [loadData]);
 
   
   // 暴露方法给父组件
@@ -203,88 +232,32 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
     }
   }, [dataList]);
 
-  const loadWorkStatus = async () => {
-    try {
-      const response = await apiGet('/api/getWorkStatus');
-      if (response.code === "200") {
-        setWorkStatus(response.data.status);
-        return response.data.status;
-      }
-      return 0; // 默认状态
-    } catch (error) {
-      console.error('获取工作状态失败:', error);
-      return 0; // 默认状态
-    }
-  };
-
-  // 修改后的启动轮询函数
-  const startPolling = async () => {
-    clearInterval(timeRef.current);
-    
-    // 先检查工作状态
-    const currentStatus = await loadWorkStatus();
-    
-    if (currentStatus === 2) {
-      // 状态为2时开始轮询
-      timeRef.current = setInterval(async () => {
-        // 每次轮询前再次检查状态
-        const status = await loadWorkStatus();
-        if (status === 2) {
-          await loadData();
-        } else {
-          // 状态不为2，停止轮询
-          clearInterval(timeRef.current);
-          setWorkStatus(status);
-        }
-      }, INTERVAL);
-    } else {
-      // 状态不为2，不启动轮询
-      setWorkStatus(currentStatus);
-    }
-  };
-
-  // 状态监控轮询（独立监控工作状态变化）
-  const startStatusMonitoring = () => {
-    const statusCheckInterval = setInterval(async () => {
-      const currentStatus = await loadWorkStatus();
-      
-      if (currentStatus !== workStatus) {
-        setWorkStatus(currentStatus);
-        
-        if (currentStatus === 2) {
-          // 状态变为2，启动数据轮询
-          await startPolling();
-        } else {
-          // 状态不为2，停止数据轮询
-          clearInterval(timeRef.current);
-        }
-      }
-    }, STATUS_CHECK_INTERVAL);
-    
-    return () => clearInterval(statusCheckInterval);
-  };
-
-  const stopPolling = () => {
-    clearInterval(timeRef.current);
-  };
-
-  // 修改现有的 useEffect
   useEffect(() => {
-    if (props.match.params.type !== 'detail') {
-      // 启动状态监控
-      const stopStatusMonitoring = startStatusMonitoring();
-      
-      // 初始检查并可能启动轮询
-      startPolling();
-      
-      return () => {
-        stopPolling();
-        stopStatusMonitoring();
-      };
-    } else {
-      stopPolling();
-    }
-  }, [props.match.params.type]);
+    if (packetType === 'detail') return undefined;
+    let active = true;
+    let timer;
+    let wasCapturing = false;
+    const poll = async (initial = false) => {
+      let capturing = false;
+      try {
+        const response = await apiGet('/api/getWorkStatus');
+        if (!active) return;
+        if (String(response?.code) !== '200') throw new Error(response?.msg || '获取工作状态失败');
+        capturing = response.data.status === 2;
+        if (!initial && (capturing || wasCapturing)) await loadData({ silent: true });
+        wasCapturing = capturing;
+      } catch (error) {
+        if (active) console.error('Failed to poll packet status:', error);
+      } finally {
+        if (active) timer = setTimeout(poll, capturing ? INTERVAL : STATUS_CHECK_INTERVAL);
+      }
+    };
+    poll(true);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [loadData, packetType]);
   
 
   const [columns, setColumns] = useState(
@@ -323,31 +296,29 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
   };
 
 
-  const loadPacketDetail = async ()=>{
-    const _data = await apiPost('/api/getPacketDetail',{
-      frameNumber:currentRowId
-    })
-    const tree = _data?.data.proto.map(addUniqueID);
-    setTreeData(tree);
-    transformHexData(_data?.data?.hexdata);
-  }
-
   useEffect(()=>{
-    loadPacketDetail();
+    let active = true;
+    setTreeData([]);
+    setDetailError('');
+    setSelectedKeys([]);
+    setSelectedLeftHex([]);
+    setSelectedRightHex([]);
+    transformHexData('');
+    if (currentRowId > 0) {
+      apiPost('/api/getPacketDetail', { frameNumber: currentRowId }).then((response) => {
+        if (!active) return;
+        if (!Array.isArray(response?.data?.proto)) {
+          throw new Error('数据包协议详情解析失败');
+        }
+        setTreeData(buildProtocolTree(response.data.proto));
+        transformHexData(response.data.hexdata || '');
+      }).catch(() => {
+        if (active) setDetailError('无法解析数据包详情，请确认抓包文件可读后重试。');
+      });
+    }
+    return () => { active = false; };
   },[currentRowId]);
 
-  const makeIdGenerator=()=>{
-    let idCounter = 0;
-    return ()=> idCounter++;
-  }
-  const generateId = makeIdGenerator();
-  const addUniqueID = (node)=>{
-    const updateNode = {...node,id:generateId().toString()};
-    if(Array.isArray(updateNode.field) && updateNode.field.length > 0){
-      updateNode.field = updateNode.field.map(addUniqueID);
-    }
-    return updateNode;
-  }
   const renderTitle = (node)=>{
     const title = node.dataRef.showname || node.dataRef.name || node.dataRef.show;
     if (node._level === 0) {
@@ -374,7 +345,7 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
       ascData.push(asc);
     }
   
-    const arr = strTwoSplit(hex).split(',');
+    const arr = strTwoSplit(hex).split(',').filter(Boolean);
     arr.map((item, index) => {
       hexData.push({ label: item, key: index });
     });
@@ -399,31 +370,17 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
 // 点击节点高亮偏移量
   const handleNodeClick = (node, data) => {
     setSelectedKeys(node)
-    const pos = parseInt(data.node?.props.pos)
-    const size = parseInt(data.node?.props.size) + pos
-    const leftArr = []
-    const rightArr = []
-    for (let i = pos; i < size; i++) {
-      leftArr.push(i)
-    }
-    setSelectedRightHex([...leftArr])
-    // 计算8位偏移量是否选中
-    if (data.node && parseInt(data.node?.props.size) !== 0) {
-      const posLeft = !isInteger((pos + 1) / 16) ? ((pos + 1) / 16 >> 0) + 1 : (pos + 1) / 16
-      const sizeLeft = !isInteger(size / 16) ? (size / 16 >> 0) + 1 : size / 16
-      for (let i = posLeft; i <= sizeLeft; i++) {
-        rightArr.push(i)
-      }
-      setSelectedLeftHex([...rightArr])
-    } else {
-      setSelectedLeftHex([])
-    }
+    const selectedNode = data.node?.props?.dataRef || data.node?.props;
+    const bytes = packetByteRange(selectedNode, ascData.length);
+    setSelectedRightHex(bytes);
+    setSelectedLeftHex([...new Set(bytes.map((index) => Math.floor(index / 16) + 1))]);
   }
 
 
 
   return (
     <div>
+      {listError && <div role='alert'>{listError}</div>}
       {props.match.params.type !== 'detail' && (
         <div className='traffic-filter-bar'>
           <Input
@@ -434,6 +391,7 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
           />
           <Button type='primary' onClick={submitSearch}>筛选</Button>
           <Button onClick={clearSearch} disabled={!searchInput && !searchKeyword}>清除</Button>
+          <FilterHelp scope='packets' />
         </div>
       )}
       <Resizable
@@ -482,6 +440,7 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
       </Resizable>
       <div className='detail-pannel'>
         <div className='proto-tree'>
+          {detailError && <div role='alert'>{detailError}</div>}
           <Tree
            selectedKeys={selectedKeys}
            treeData={treeData}
@@ -491,7 +450,7 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
            fieldNames={{
             key: 'id',
             title: 'showname',
-            children: 'field',
+            children: 'children',
            }}
            renderTitle={renderTitle}
            onSelect={handleNodeClick}

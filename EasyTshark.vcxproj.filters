@@ -71,6 +71,15 @@
     <ClInclude Include="include\tshark_datatype.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="include\AppConfig.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PathDialog.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Controller\SettingsController.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="include\TsharkManager.h">
       <Filter>头文件</Filter>
     </ClInclude>

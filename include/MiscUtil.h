@@ -7,6 +7,9 @@
 #include <ctime>
 #include <iomanip>
 #include <filesystem>
+#include <iostream>
+#include <set>
+#include <vector>
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -61,7 +64,7 @@ public:
         // 解析 XML
         xml_document<> doc;
         try {
-            doc.parse<0>(&xmlContent[0]);
+            doc.parse<parse_validate_closing_tags>(&xmlContent[0]);
         }
         catch (const rapidxml::parse_error& e) {
             std::cout << "XML Parsing error: " << e.what() << std::endl;
@@ -82,7 +85,7 @@ public:
             // 将根节点添加到 JSON 文档
             outJsonDoc.AddMember(Value(root->name(), allocator).Move(), root_json, allocator);
         }
-        return true;
+        return root != nullptr;
     }
 
     static void trimEnd(std::string& str) {
@@ -150,14 +153,14 @@ public:
 
     static bool copyFile(const std::string& source, const std::string& destination) {
 		try {
-			const std::filesystem::path destinationPath(destination);
+			const auto destinationPath = std::filesystem::u8path(destination);
 			if (destinationPath.has_parent_path()) {
 				std::filesystem::create_directories(destinationPath.parent_path());
 			}
 #ifdef _WIN32
-			return CopyFileA(source.c_str(), destination.c_str(), FALSE) != FALSE;
+			return CopyFileW(std::filesystem::u8path(source).c_str(), destinationPath.c_str(), FALSE) != FALSE;
 #else
-			std::filesystem::copy_file(source, destination,
+			std::filesystem::copy_file(std::filesystem::u8path(source), destinationPath,
 				std::filesystem::copy_options::overwrite_existing);
 			return true;
 #endif
@@ -171,25 +174,27 @@ private:
     static void xml_to_json_recursive(Value& json, xml_node<>* node, Document::AllocatorType& allocator) {
         for (xml_node<>* cur_node = node->first_node(); cur_node; cur_node = cur_node->next_sibling()) {
 
-            // 检查是否需要跳过节点
-            xml_attribute<>* hide_attr = cur_node->first_attribute("hide");
-            if (hide_attr && std::string(hide_attr->value()) == "yes") {
-                continue;  // 如果 hide 属性值为 "true"，跳过该节点
+            if (cur_node->type() != node_element) {
+                continue;
             }
 
             // 检查是否已经有该节点名称的数组
+            const std::string parentName(node->name(), node->name_size());
+            const char* childKey = (parentName == "proto" || parentName == "field")
+                ? "children" : cur_node->name();
             Value* array = nullptr;
-            if (json.HasMember(cur_node->name())) {
-                array = &json[cur_node->name()];
+            if (json.HasMember(childKey)) {
+                array = &json[childKey];
             }
             else {
                 Value node_array(kArrayType); // 创建新的数组
-                json.AddMember(Value(cur_node->name(), allocator).Move(), node_array, allocator);
-                array = &json[cur_node->name()];
+                json.AddMember(Value(childKey, allocator).Move(), node_array, allocator);
+                array = &json[childKey];
             }
 
             // 创建一个 JSON 对象代表当前节点
             Value child_json(kObjectType);
+            child_json.AddMember("element", Value(cur_node->name(), allocator).Move(), allocator);
 
             // 处理节点的属性
             for (xml_attribute<>* attr = cur_node->first_attribute(); attr; attr = attr->next_attribute()) {

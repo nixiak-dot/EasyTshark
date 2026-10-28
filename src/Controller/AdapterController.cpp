@@ -6,6 +6,14 @@ AdapterController::AdapterController(httplib::server& HttpServer, std::shared_pt
 }
 
 void AdapterController::registerRoute() {
+    __HttpServer.Get("/api/getNetworkAdapters", [this](const httplib::Request& request, httplib::Response& response) {
+        getNetworkAdapters(request, response);
+        });
+
+    __HttpServer.Post("/api/settings/trendAdapters", [this](const httplib::Request& request, httplib::Response& response) {
+        setTrendAdapterNames(request, response);
+    });
+
     __HttpServer.Get("/api/getWorkStatus", [this](const httplib::Request& request, httplib::Response& response) {
         getWorkStatus(request, response);
         });
@@ -29,6 +37,47 @@ void AdapterController::registerRoute() {
     __HttpServer.Get("/api/getAdapterFlowTrendData", [this](const httplib::Request& request, httplib::Response& response) {
         getAdapterFlowTrendData(request, response);
         });
+}
+
+void AdapterController::setTrendAdapterNames(const httplib::Request& request, httplib::Response& response) {
+    try {
+        rapidjson::Document document;
+        if (document.Parse(request.body.c_str()).HasParseError() || !document.IsObject()
+            || !document.HasMember("adapterNames") || !document["adapterNames"].IsArray()) {
+            return sendErrorResponse(response, "Invalid adapter selection");
+        }
+        std::vector<std::string> adapterNames;
+        for (const auto& adapter : document["adapterNames"].GetArray()) {
+            if (!adapter.IsString()) return sendErrorResponse(response, "Invalid adapter selection");
+            adapterNames.emplace_back(adapter.GetString(), adapter.GetStringLength());
+        }
+        std::string error;
+        if (!__tsharkManager->setTrendAdapterNames(adapterNames, error)) return sendErrorResponse(response, error);
+        sendSuccessResponse(response);
+    } catch (const std::exception& error) {
+        sendErrorResponse(response, error.what());
+    }
+}
+
+void AdapterController::getNetworkAdapters(const httplib::Request&, httplib::Response& response) {
+    try {
+        const auto adapters = __tsharkManager->getNetworkAdapters();
+        const auto selectedNames = __tsharkManager->getTrendAdapterNames();
+        rapidjson::Document document(rapidjson::kObjectType);
+        auto& allocator = document.GetAllocator();
+        rapidjson::Value data(rapidjson::kArrayType);
+        for (const auto& adapter : adapters) {
+            rapidjson::Value item(rapidjson::kObjectType);
+            item.AddMember("name", rapidjson::Value(adapter.name.c_str(), allocator).Move(), allocator);
+            item.AddMember("remark", rapidjson::Value(adapter.remark.c_str(), allocator).Move(), allocator);
+            item.AddMember("selected", std::find(selectedNames.begin(), selectedNames.end(), adapter.name) != selectedNames.end(), allocator);
+            data.PushBack(item, allocator);
+        }
+        document.AddMember("adapters", data, allocator);
+        sendJsonResponse(response, document);
+    } catch (const std::exception& error) {
+        sendErrorResponse(response, error.what());
+    }
 }
 
 void AdapterController::getWorkStatus(const httplib::Request& request, httplib::Response& response) {
@@ -115,37 +164,26 @@ void AdapterController::stopCapture(const httplib::Request& request, httplib::Re
 
 void AdapterController::startMonitorAdapterFlowTrend(const httplib::Request& request, httplib::Response& response) {
     try {
-        if (__tsharkManager->getWorkStatus() == STATUS_IDLE) {
-            __tsharkManager->startMonitorAdaptersFlowTrend();
-            sendSuccessResponse(response);
-        }
-        else if (__tsharkManager->getWorkStatus() == STATUS_MONITORING) {
-            sendSuccessResponse(response);
-        }
-        else {
-            sendErrorResponse(response, "system is busy!");
-        }
+        const std::string adapterName = getStringParam(request, "adapterName");
+        if (adapterName.empty()) return sendErrorResponse(response, "Adapter name is required");
+        __tsharkManager->startMonitorAdaptersFlowTrend(adapterName);
+        sendSuccessResponse(response);
     }
     catch (const std::exception& e) {
         LOG_ERROR("startMonitorAdapterFlowTrend exception: {}", e.what());
-        sendErrorResponse(response, "internal error");
+        sendErrorResponse(response, e.what());
     }
 
 }
 
 void AdapterController::stopMonitorAdapterFlowTrend(const httplib::Request& request, httplib::Response& response) {
     try {
-        if (__tsharkManager->getWorkStatus() != STATUS_MONITORING) {
-            sendErrorResponse(response, "system is not monitoring!");
-        }
-        else {
-            __tsharkManager->stopMonitorAdaptersFlowTread();
-            sendSuccessResponse(response);
-        }
+        __tsharkManager->stopMonitorAdaptersFlowTread();
+        sendSuccessResponse(response);
     }
     catch (const std::exception& e) {
         LOG_ERROR("stopMonitorAdapterFlowTrend exception: {}", e.what());
-        sendErrorResponse(response, "internal error");
+        sendErrorResponse(response, e.what());
     }
 }
 

@@ -10,6 +10,8 @@ public:
 
 	//接口实现
 	void getWorkStatus(const httplib::Request& request, httplib::Response& response);
+	void getNetworkAdapters(const httplib::Request& request, httplib::Response& response);
+	void setTrendAdapterNames(const httplib::Request& request, httplib::Response& response);
 
 	void startCapture(const httplib::Request& request, httplib::Response& response);
 

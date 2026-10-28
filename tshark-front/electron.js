@@ -15,7 +15,7 @@ function createWindow()
     windows.mainWindow = new BrowserWindow({
         width:1200,
         height:900,
-        title:'MyTshark',
+        title:'EasyTshark',
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
@@ -45,6 +45,10 @@ function startTsharkServer() {
         .find((filePath) => fs.existsSync(filePath));
     if (!serverPath) return;
     const serverProcess = spawn(serverPath, [`--uipid=${process.pid}`], {
+        env: {
+            ...process.env,
+            ...(app.isPackaged ? { EASYTSHARK_DATA_DIR: path.dirname(app.getPath('exe')) } : {})
+        },
         detached: true,
         stdio: 'ignore',
         windowsHide: true
@@ -63,16 +67,42 @@ ipcMain.handle('open-file-dialog', async () => {
     return result.canceled ? null : result.filePaths[0];
 });
 
-ipcMain.handle('show-save-dialog', async () => {
+ipcMain.handle('show-save-dialog', async (_, directory) => {
     const result = await dialog.showSaveDialog(windows.mainWindow, {
         title: '保存文件',
-        defaultPath: 'capture.pcap',
+        defaultPath: typeof directory === 'string' && directory ? path.join(directory, 'capture.pcap') : 'capture.pcap',
         filters: [
             { name: 'Capture files', extensions: ['pcap'] },
             { name: 'All files', extensions: ['*'] }
         ]
     });
     return result.canceled ? null : result.filePath;
+});
+
+ipcMain.handle('select-settings-path', async (_, field, currentPath) => {
+    const titles = {
+        tsharkPath: '选择 tshark.exe',
+        editcapPath: '选择 editcap.exe',
+        pcapDirectory: '选择抓包保存目录',
+        tlsKeyLogPath: '选择密钥日志文件路径（仅保存配置）'
+    };
+    if (!Object.prototype.hasOwnProperty.call(titles, field)) throw new Error('不支持的配置项');
+    const options = {
+        title: titles[field],
+        defaultPath: typeof currentPath === 'string' && currentPath ? currentPath : undefined
+    };
+    if (field === 'tlsKeyLogPath') {
+        const result = await dialog.showSaveDialog(windows.mainWindow, {
+            ...options, filters: [{ name: 'Key log files', extensions: ['log', 'txt', 'keys'] }, { name: 'All files', extensions: ['*'] }]
+        });
+        return result.canceled ? null : result.filePath;
+    }
+    const result = await dialog.showOpenDialog(windows.mainWindow, {
+        ...options,
+        properties: field === 'pcapDirectory' ? ['openDirectory', 'createDirectory'] : ['openFile'],
+        filters: field === 'pcapDirectory' ? [] : [{ name: 'Executables', extensions: ['exe'] }]
+    });
+    return result.canceled ? null : result.filePaths[0];
 });
 
 app.whenReady().then(()=>{
@@ -89,7 +119,7 @@ app.on('web-contents-created',function(event,webContents){
         const browserWindow = new BrowserWindow({
           width: 1000,
           height: 800,
-          title: 'MyTshark'
+          title: 'EasyTshark'
         });
 
         if (windows.windowIndex === 0) {
