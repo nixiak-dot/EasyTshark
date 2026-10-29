@@ -38,27 +38,6 @@
 }
 
 .settings-persistence {
-.settings-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-top: 16px;
-  padding: 12px 14px;
-  border-radius: var(--border-radius-medium);
-  background: var(--color-fill-2);
-}
-
-.settings-note > .arco-icon {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: var(--color-text-3);
-}
-
-.settings-note .arco-typography {
-  margin-bottom: 0;
-  color: var(--color-text-2);
-  font-size: 12px;
-}
   margin-top: 16px;
   color: var(--color-text-3);
   font-size: 12px;

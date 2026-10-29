@@ -18,6 +18,7 @@ export function protocolTitle(node) {
 
 export function buildProtocolTree(protocols = []) {
   let usesReassembledData = false;
+  let usesDecryptedData = false;
   const visit = (node, path, byteSourceAvailable) => ({
     ...node,
     id: path,
@@ -27,8 +28,9 @@ export function buildProtocolTree(protocols = []) {
       visit(child, `${path}-${index}`, byteSourceAvailable && !hasReassembledData(child))),
   });
   return protocols.map((node, index) => {
-    const tree = visit(node, `${index}`, !usesReassembledData);
+    const tree = visit(node, `${index}`, !usesReassembledData && !usesDecryptedData);
     usesReassembledData = usesReassembledData || hasReassembledData(node);
+    usesDecryptedData = usesDecryptedData || node.name === 'tls' || node.name === 'ssl';
     return tree;
   });
 }

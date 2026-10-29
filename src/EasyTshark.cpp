@@ -94,8 +94,22 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    auto tsharkManager = std::make_shared<TsharkManager>(currentExePath);
     httplib::server HttpServer;
+#ifdef _WIN32
+    HttpServer.set_socket_options([](socket_t socket) {
+        const int exclusive = 1;
+        setsockopt(socket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
+            reinterpret_cast<const char*>(&exclusive), sizeof(exclusive));
+    });
+#endif
+    if (!HttpServer.bind_to_port("127.0.0.1", kHttpPort)) {
+        std::cerr << "Cannot start EasyTshark: 127.0.0.1:" << kHttpPort
+            << " is unavailable. Close the other backend before starting this executable: "
+            << currentExePath << std::endl;
+        LOG_ERROR("Failed to bind port {}; backend was not started: {}", kHttpPort, currentExePath);
+        return EXIT_FAILURE;
+    }
+    auto tsharkManager = std::make_shared<TsharkManager>(currentExePath);
     HttpServer.Options(".*", [](const httplib::Request&, httplib::Response& response) {
         response.set_header("Access-Control-Allow-Origin", "http://localhost:3000");
         response.set_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PUT");
@@ -118,7 +132,7 @@ int main(int argc, char* argv[]) {
 
     auto runServer = [&HttpServer]() {
         LOG_INFO("EasyTshark server is running on port {}", kHttpPort);
-        HttpServer.listen("127.0.0.1", kHttpPort);
+        HttpServer.listen_after_bind();
     };
 
     if (uiProcessId == 0) {

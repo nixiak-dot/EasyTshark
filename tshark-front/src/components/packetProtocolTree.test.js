@@ -39,6 +39,18 @@ test('only maps valid, captured-frame byte ranges', () => {
   ].forEach((node) => expect(packetByteRange(node, 64)).toEqual([]));
 });
 
+test.each(['tls', 'ssl'])('keeps %s record byte ranges but not decrypted HTTP offsets', (name) => {
+  const tree = buildProtocolTree([
+    { name, children: [{ name: 'tls.record', pos: '54', size: '5' }] },
+    { name: 'http', children: [{ name: 'http.host', pos: '0', size: '4', show: 'test' }] },
+    { name: 'http2', children: [{ name: 'http2.header', pos: '2', size: '8' }] },
+  ]);
+  expect(packetByteRange(tree[0].children[0], 100)).toEqual([54, 55, 56, 57, 58]);
+  expect(tree[1].children[0].showname).toBe('http.host: test');
+  expect(packetByteRange(tree[1].children[0], 100)).toEqual([]);
+  expect(packetByteRange(tree[2].children[0], 100)).toEqual([]);
+});
+
 test('shows reassembled HTTP fields without mapping them onto current-frame bytes', () => {
   const tree = buildProtocolTree([
     { name: 'tcp', children: [

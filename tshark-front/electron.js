@@ -84,7 +84,7 @@ ipcMain.handle('select-settings-path', async (_, field, currentPath) => {
         tsharkPath: '选择 tshark.exe',
         editcapPath: '选择 editcap.exe',
         pcapDirectory: '选择抓包保存目录',
-        tlsKeyLogPath: '选择密钥日志文件路径（仅保存配置）'
+        tlsKeyLogPath: '选择 TLS 密钥日志文件'
     };
     if (!Object.prototype.hasOwnProperty.call(titles, field)) throw new Error('不支持的配置项');
     const options = {
@@ -92,10 +92,11 @@ ipcMain.handle('select-settings-path', async (_, field, currentPath) => {
         defaultPath: typeof currentPath === 'string' && currentPath ? currentPath : undefined
     };
     if (field === 'tlsKeyLogPath') {
-        const result = await dialog.showSaveDialog(windows.mainWindow, {
-            ...options, filters: [{ name: 'Key log files', extensions: ['log', 'txt', 'keys'] }, { name: 'All files', extensions: ['*'] }]
+        const result = await dialog.showOpenDialog(windows.mainWindow, {
+            ...options, buttonLabel: '打开', properties: ['openFile'],
+            filters: [{ name: '密钥日志文件', extensions: ['log', 'txt', 'keys'] }, { name: '所有文件', extensions: ['*'] }]
         });
-        return result.canceled ? null : result.filePath;
+        return result.canceled ? null : result.filePaths[0];
     }
     const result = await dialog.showOpenDialog(windows.mainWindow, {
         ...options,

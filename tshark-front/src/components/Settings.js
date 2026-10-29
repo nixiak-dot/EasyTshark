@@ -5,10 +5,10 @@ import { IconSettings, IconFolder, IconFile, IconLock } from '@arco-design/web-r
 import '../style/settings.css';
 
 const fields = [
-  { name: 'tsharkPath', label: 'TShark 可执行文件', placeholder: '选择 Wireshark 安装目录中的 tshark.exe', hint: '用于抓包、协议识别和数据包详情解析。', required: true },
-  { name: 'editcapPath', label: 'Editcap 可执行文件', placeholder: '选择 Wireshark 安装目录中的 editcap.exe', hint: '用于抓包格式转换，通常与 tshark.exe 位于同一目录。', required: true },
-  { name: 'pcapDirectory', label: '抓包保存目录', placeholder: '选择保存抓包文件的文件夹', hint: '保存实时抓包和离线分析副本；手动输入的新目录会在保存时创建。', required: true },
-  { name: 'tlsKeyLogPath', label: 'TLS 密钥日志文件（可选）', placeholder: '选择日志文件，或指定未来保存的位置', hint: '可选择已有文件，也可指定新文件名；不会创建或覆盖文件。', required: false },
+  { name: 'tsharkPath', label: 'TShark 可执行文件', placeholder: '选择 Wireshark 安装目录中的 tshark.exe', required: true },
+  { name: 'editcapPath', label: 'Editcap 可执行文件', placeholder: '选择 Wireshark 安装目录中的 editcap.exe', required: true },
+  { name: 'pcapDirectory', label: '抓包保存目录', placeholder: '选择抓包保存目录', required: true },
+  { name: 'tlsKeyLogPath', label: 'TLS 密钥日志文件（可选）', placeholder: '选择已有日志，或手动输入路径', hint: '用于 HTTPS 解密，路径须与浏览器的 SSLKEYLOGFILE 一致。', required: false },
 ];
 
 export function suggestedSettingsPath(field, values) {
@@ -83,13 +83,13 @@ export function SettingsPanel({ settings, required, preparing = false, loadingEr
 
   const renderField = (field) => (
     <Form.Item key={field.name} label={field.label} required={field.required}
-      extra={<span id={`settings-hint-${field.name}`}>{field.hint}</span>}>
+      extra={field.hint ? <span id={`settings-hint-${field.name}`}>{field.hint}</span> : undefined}>
       <div className='settings-path-input'>
         <Input id={`settings-${field.name}`} aria-label={field.label} value={values[field.name] || ''}
           required={field.required} disabled={busy}
           prefix={field.name === 'pcapDirectory' ? <IconFolder /> : field.name === 'tlsKeyLogPath' ? <IconLock /> : <IconFile />}
           placeholder={field.placeholder} title={values[field.name] || ''}
-          autoComplete='off' spellCheck={false} aria-describedby={`settings-hint-${field.name}`}
+          autoComplete='off' spellCheck={false} aria-describedby={field.hint ? `settings-hint-${field.name}` : undefined}
           onChange={(value) => setValues((previous) => ({ ...previous, [field.name]: value }))} />
         <Button disabled={busy} loading={picking === field.name} icon={<IconFolder />}
           onClick={() => choosePath(field.name)} aria-label={`浏览${field.label}`}>
@@ -114,19 +114,16 @@ export function SettingsPanel({ settings, required, preparing = false, loadingEr
         <Button type='primary' disabled={busy} loading={saving} onClick={submit}>保存设置</Button>
       </Space>}>
       <div ref={panelRef}>
-        <Typography.Paragraph type='secondary'>
-          {required ? '首次使用，请配置分析工具和抓包保存位置。' : '修改分析工具与存储位置，保存后生效。'} 可通过系统窗口选择，也可直接输入路径。
-        </Typography.Paragraph>
+        {required && <Typography.Paragraph type='secondary'>首次使用，请配置分析工具和抓包保存位置。</Typography.Paragraph>}
         <Form layout='vertical' onSubmit={() => save()}>
           {settings.errors?.map((message, index) => <Alert type='warning' content={message} key={index} />)}
           {preparing && <p className='settings-progress' role='status'>正在读取设置并停止网卡预览监控…</p>}
-          {picking && <p className='settings-progress' role='status'>正在等待系统窗口选择；如果窗口未在前台，请查看任务栏。</p>}
+          {picking && <p className='settings-progress' role='status'>正在等待系统窗口选择…</p>}
           {loadingError && <Alert type='error' content={loadingError} />}
           <Divider orientation='left'>分析工具</Divider>
           {fields.slice(0, 2).map(renderField)}
           <Divider orientation='left'>本地存储</Divider>
           {fields.slice(2).map(renderField)}
-          <div className='settings-note'><IconLock aria-hidden='true' /><Typography.Text>密钥日志目前仅保存路径，不会设置 SSLKEYLOGFILE、创建密钥日志或启用 HTTPS 解密。更改配置前，请先停止抓包或文件分析。</Typography.Text></div>
           {error && <Alert type='error' content={error} />}
           <div className='settings-persistence'>配置文件：<code>{settings.configPath}</code></div>
         </Form>

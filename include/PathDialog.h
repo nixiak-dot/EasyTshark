@@ -44,7 +44,7 @@ public:
         Microsoft::WRL::ComPtr<IFileDialog> dialog;
         const bool directory = field == "pcapDirectory";
         const bool keyLog = field == "tlsKeyLogPath";
-        HRESULT result = CoCreateInstance(keyLog ? CLSID_FileSaveDialog : CLSID_FileOpenDialog,
+        HRESULT result = CoCreateInstance(CLSID_FileOpenDialog,
             nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(dialog.GetAddressOf()));
         if (FAILED(result)) {
             error = "无法创建系统文件选择窗口";
@@ -55,8 +55,7 @@ public:
         if (SUCCEEDED(result)) {
             options |= FOS_FORCEFILESYSTEM | FOS_NOCHANGEDIR | FOS_PATHMUSTEXIST;
             if (directory) options |= FOS_PICKFOLDERS;
-            else if (!keyLog) options |= FOS_FILEMUSTEXIST;
-            if (keyLog) options &= ~FOS_OVERWRITEPROMPT;
+            else options |= FOS_FILEMUSTEXIST;
             result = dialog->SetOptions(options);
         }
         if (FAILED(result)) {
@@ -64,9 +63,10 @@ public:
             return false;
         }
         const wchar_t* title = directory ? L"选择抓包保存目录"
-            : keyLog ? L"选择密钥日志路径（仅选择路径，不创建或覆盖文件）"
+            : keyLog ? L"选择 TLS 密钥日志文件"
             : field == "tsharkPath" ? L"选择 Wireshark 的 tshark.exe" : L"选择 Wireshark 的 editcap.exe";
         dialog->SetTitle(title);
+        if (keyLog) dialog->SetOkButtonLabel(L"打开");
         if (!directory) {
             const COMDLG_FILTERSPEC executables[] = { { L"可执行文件 (*.exe)", L"*.exe" } };
             const COMDLG_FILTERSPEC keyLogs[] = {
@@ -74,7 +74,6 @@ public:
             };
             dialog->SetFileTypes(keyLog ? 2 : 1, keyLog ? keyLogs : executables);
             dialog->SetFileName(keyLog ? L"tls-keys.log" : field == "tsharkPath" ? L"tshark.exe" : L"editcap.exe");
-            if (keyLog) dialog->SetDefaultExtension(L"log");
         }
         try {
             if (!currentPath.empty()) {

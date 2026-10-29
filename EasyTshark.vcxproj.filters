@@ -80,6 +80,9 @@
     <ClInclude Include="include\Controller\SettingsController.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="include\TsharkDissection.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
     <ClInclude Include="include\TsharkManager.h">
       <Filter>头文件</Filter>
     </ClInclude>

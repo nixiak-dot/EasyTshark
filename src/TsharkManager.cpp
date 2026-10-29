@@ -1,5 +1,6 @@
 ﻿#include "TsharkManager.h"
 #include <filesystem>
+#include "TsharkDissection.h"
 #include <utility>
 
 
@@ -134,6 +135,7 @@ bool TsharkManager::capturePacketEntry(std::string adapterName) {
 		"-e", "_ws.col.Info ",
 		"-e", "ip.proto",
 		"-e", "ipv6.nxt",
+		"-e", "frame.protocols",
 	};
 	std::string command;
 	for (auto& p : tsharkArgs) {
@@ -142,6 +144,7 @@ bool TsharkManager::capturePacketEntry(std::string adapterName) {
 	}
 
 	//FILE* pipe = _popen(command.c_str(),"r");
+	command += tsharkDissectionOptions(config.paths.tlsKeyLogPath);
 	FILE* pipe = ProcessUtil::popenEx(command.c_str(), &captureTsharkPid);
 	if (!pipe) {
 		std::cerr << "fail to open file";
@@ -188,9 +191,8 @@ bool TsharkManager::capturePacketEntry(std::string adapterName) {
 //解析tshark输出(线程)
 bool TsharkManager::parseLine(std::string line, std::shared_ptr<Packet> packet) {
 	//剔除换行符
-	if (line.back() == '\n') {
-		line.pop_back();
-	}
+	MiscUtil::trimEnd(line);
+	if (line.empty()) return false;
 
 	std::vector<std::string>fields;
 	size_t start = 0;
@@ -246,7 +248,7 @@ bool TsharkManager::parseLine(std::string line, std::shared_ptr<Packet> packet) 
 			packet->dst_ip = fields[10];
 			packet->dst_location = IP2RegionUtil::getIpLocation(packet->dst_ip);
 		}
-		packet->protocol = fields[14];
+		packet->protocol = tsharkPacketProtocol(fields[14], fields.size() > 18 ? fields[18] : "");
 		packet->info = fields[15];
 
 		// 安全地处理端口号
@@ -314,9 +316,7 @@ void TsharkManager::captureProcessPacket(std::shared_ptr<Packet> packet) {
 			session->start_time = packet->time;
 			session->end_time = packet->time;
 			session->trans_proto = packet->trans_proto;
-			if (packet->protocol != "TCP" && packet->protocol != "UDP") {
-				session->app_proto = packet->protocol;
-			}
+			session->app_proto = sessionApplicationProtocol(session->app_proto, packet->protocol);
 
 			sessionMap.insert(std::make_pair(tuple, session));
 			sessionIdMap.insert(std::make_pair(session->session_id,session));
@@ -325,9 +325,7 @@ void TsharkManager::captureProcessPacket(std::shared_ptr<Packet> packet) {
 			// 旧的会话，更新会话信息
 			session = sessionMap[tuple];
 			session->end_time = packet->time;
-			if (packet->protocol != "TCP" && packet->protocol != "UDP") {
-				session->app_proto = packet->protocol;
-			}
+			session->app_proto = sessionApplicationProtocol(session->app_proto, packet->protocol);
 		}
 
 		// 共同的字段更新
@@ -486,6 +484,7 @@ bool TsharkManager::getPacketDetailInfo(uint32_t frameNumber, rapidjson::Documen
 
 	std::string command = "\"" + tsharkPath + "\" -2 -r \"" + currentFilePath
 		+ "\" -Y \"frame.number == " + std::to_string(frameNumber) + "\" -T pdml";
+	command += tsharkDissectionOptions(config.paths.tlsKeyLogPath);
 	std::unique_ptr<FILE, decltype(&_pclose)> pipe(ProcessUtil::popenEx(command, nullptr, false), _pclose);
 	if (!pipe) {
 		Logger::LOG_ERROR("管道创建失败,命令:{}",command);
@@ -614,6 +613,7 @@ bool TsharkManager::analysisFile(std::string pcapFilePath) {
 		"-e", "_ws.col.Info ",
 		"-e", "ip.proto",
 		"-e", "ipv6.nxt",
+		"-e", "frame.protocols",
 	};
 	std::string command;
 	for (size_t index = 0; index < tsharkArgs.size(); ++index) {
@@ -626,6 +626,7 @@ bool TsharkManager::analysisFile(std::string pcapFilePath) {
 		command += " ";
 	}
 
+	command += tsharkDissectionOptions(config.paths.tlsKeyLogPath);
 	FILE* pipe = ProcessUtil::popenEx(command.c_str(), &analyseTsharkPid);
 	if (!pipe) {
 		std::cerr << "fail to open file";
@@ -716,9 +717,7 @@ void TsharkManager::analyseProcessPacket(std::shared_ptr<Packet> packet) {
 			session->start_time = packet->time;
 			session->end_time = packet->time;
 			session->trans_proto = packet->trans_proto;
-			if (packet->protocol != "TCP" && packet->protocol != "UDP") {
-				session->app_proto = packet->protocol;
-			}
+			session->app_proto = sessionApplicationProtocol(session->app_proto, packet->protocol);
 
 			sessionMap.insert(std::make_pair(tuple, session));
 			sessionIdMap.insert(std::make_pair(session->session_id,session));
@@ -727,9 +726,7 @@ void TsharkManager::analyseProcessPacket(std::shared_ptr<Packet> packet) {
 			// 旧的会话，更新会话信息
 			session = sessionMap[tuple];
 			session->end_time = packet->time;
-			if (packet->protocol != "TCP" && packet->protocol != "UDP") {
-				session->app_proto = packet->protocol;
-			}
+			session->app_proto = sessionApplicationProtocol(session->app_proto, packet->protocol);
 		}
 
 		// 共同的字段更新

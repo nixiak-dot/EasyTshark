@@ -185,6 +185,7 @@
     <ClInclude Include="include\SessionSQL.h" />
     <ClInclude Include="include\StatsSQL.h" />
     <ClInclude Include="include\TsharkDatabase.h" />
+    <ClInclude Include="include\TsharkDissection.h" />
     <ClInclude Include="include\TsharkManager.h" />
     <ClInclude Include="include\AppConfig.h" />
     <ClInclude Include="include\PathDialog.h" />

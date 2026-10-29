@@ -52,7 +52,8 @@ test('opening settings stops preview monitoring but does not start decryption', 
   expect(await screen.findByRole('dialog')).toBeInTheDocument();
   await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/api/stopMonitorAdapterFlowTrend'));
   await waitFor(() => expect(screen.getByRole('button', { name: '保存设置' })).not.toBeDisabled());
-  expect(screen.getByText(/不会设置 SSLKEYLOGFILE/)).toBeInTheDocument();
+  expect(screen.getByText('用于 HTTPS 解密，路径须与浏览器的 SSLKEYLOGFILE 一致。')).toBeInTheDocument();
+  expect(screen.queryByText(/不会设置 SSLKEYLOGFILE/)).not.toBeInTheDocument();
   expect(apiPost).not.toHaveBeenCalled();
 });
 
@@ -71,6 +72,15 @@ test('native path selection updates only the selected field', async () => {
   fireEvent.click(screen.getByRole('button', { name: '浏览抓包保存目录' }));
   await waitFor(() => expect(screen.getByRole('textbox', { name: /抓包保存目录/ })).toHaveValue('E:\\抓包目录'));
   expect(screen.getByRole('textbox', { name: /TShark 可执行文件/ })).toHaveValue(values.tsharkPath);
+});
+
+test('key log picker fills only the key path without saving settings', async () => {
+  window.electronAPI = { selectSettingsPath: jest.fn().mockResolvedValue('D:\\keys\\sslkeys.log') };
+  render(<SettingsPanel settings={settings} required={false} onSaved={jest.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: /浏览TLS 密钥日志文件/ }));
+  await waitFor(() => expect(screen.getByRole('textbox', { name: /TLS 密钥日志文件/ })).toHaveValue('D:\\keys\\sslkeys.log'));
+  expect(screen.getByRole('textbox', { name: /TShark 可执行文件/ })).toHaveValue(values.tsharkPath);
+  expect(apiPost).not.toHaveBeenCalled();
 });
 
 test('backend connection errors block capture screens and can be retried', async () => {
