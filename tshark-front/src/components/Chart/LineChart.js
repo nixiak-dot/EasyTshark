@@ -9,11 +9,12 @@ function LineChart({ data }) {
         arr.push(item.bytes)
     })
     const option = {
+        animation: false,
         grid: {
             left: 0,
             right: 0,
-            top: 0,
-            bottom: 0
+            top: 2,
+            bottom: 2
         },
         xAxis: {
             type: 'category',

@@ -133,6 +133,8 @@ npm run electron-dev
 
 ## 打包
 
+Windows 安装包允许选择盘符根目录或任意文件夹，并在该目录后自动追加 `EasyTshark`：选择 `D:\` 时安装到 `D:\EasyTshark`，选择 `D:\1\` 时安装到 `D:\1\EasyTshark`。浏览选择与手动输入遵循相同规则；末级目录已名为 `EasyTshark` 时不重复追加，父级目录包含该名称不影响追加。安装器源文件位于 `tshark-front/installer/`，不放在会被前端构建清空的 `build/` 中。卸载和升级仅删除打包时记录的程序文件，并尝试移除空目录，不递归删除安装目录；配置、抓包及其他用户文件会保留。
+
 ```bash
 npm run build
 npm run electron-build

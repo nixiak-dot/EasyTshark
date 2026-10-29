@@ -893,7 +893,7 @@ void TsharkManager::adapterFlowTrendMonitorThreadEntry(std::string adapterName) 
 
 	char buffer[256] = { 0 };
 
-	std::string tsharkCmd = "\"" + tsharkPath + "\" -i\"" + adapterName + "\" -T fields -e frame.time_epoch -e frame.len";
+	std::string tsharkCmd = "\"" + tsharkPath + "\" -l -i\"" + adapterName + "\" -T fields -e frame.time_epoch -e frame.len";
 	Logger::LOG_INFO("启动网卡流量监控{}", tsharkCmd);
 
 	PID_T tsharkPid = 0;
@@ -1007,9 +1007,9 @@ void TsharkManager::stopMonitorAdaptersFlowTread() {
 void TsharkManager::getAdaptersFlowTrendData(std::map<std::string,std::map<time_t,long>>& flowTrendData) {
 	std::lock_guard<std::recursive_mutex> lock(adapterFlowTrendMapLock);
 	time_t timeNow = time(nullptr);
-	time_t startWindow = timeNow - adapterFlowTrendMonitorStartTime > 300 ? timeNow - 300 : adapterFlowTrendMonitorStartTime;
-	time_t endWindow = timeNow - adapterFlowTrendMonitorStartTime > 300 ? timeNow : adapterFlowTrendMonitorStartTime + 300;
-	for (auto adapterPipePair : adapterFlowTrendMonitorMap) {
+	time_t startWindow = std::max(adapterFlowTrendMonitorStartTime - 1, timeNow - 299);
+	time_t endWindow = timeNow + 1;
+	for (const auto& adapterPipePair : adapterFlowTrendMonitorMap) {
 		flowTrendData.insert(std::make_pair<>(adapterPipePair.first,std::map<time_t,long>()));
 
 		//从当前时间向前推300秒

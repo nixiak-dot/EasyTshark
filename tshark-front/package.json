@@ -58,6 +58,7 @@
     "tailwindcss": "^3.4.5"
   },
   "build": {
+    "afterPack": "installer/after-pack.js",
     "asar": true,
     "appId": "MyTshark",
     "productName": "EasyTshark",
@@ -87,7 +88,7 @@
       "allowToChangeInstallationDirectory": true,
       "perMachine": false,
       "allowElevation": true,
-      "include": "build/installer.nsh"
+      "include": "installer/installer.nsh"
     },
     "win": {
       "target": "nsis",
