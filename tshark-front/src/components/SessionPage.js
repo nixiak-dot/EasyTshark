@@ -167,23 +167,39 @@ function SessionPage(props) {
   };
 
 
-  const loadData = async ()=>{
+  const sessionType = props.match.params.type;
+  useEffect(() => {
+    let active = true;
+    let timer;
     setLoading(true);
-
-    const _data = await apiPost('/api/getSessionList',{
-      "pageSize":pageSize,
-      "pageNum":currentPage,
-      "filterExpression":searchKeyword
-    })
-    console.log(_data.data)
-    setDataList(_data.data)
-    setTotal(_data.total)
-    setLoading(false);
-  }
-
-  useEffect(()=>{
-    loadData();
-  },[currentPage, pageSize, props.match.params.type, searchKeyword])
+    const poll = async () => {
+      try {
+        const response = await apiPost('/api/getSessionList', {
+          pageSize,
+          pageNum: currentPage,
+          filterExpression: searchKeyword,
+        });
+        if (!active) return;
+        if (!Array.isArray(response?.data) || (response.code !== undefined && String(response.code) !== '200')) {
+          throw new Error(response?.msg || '会话列表加载失败');
+        }
+        setDataList((previous) => JSON.stringify(previous) === JSON.stringify(response.data) ? previous : response.data);
+        setTotal(response.total);
+      } catch (error) {
+        if (active) console.error('Failed to refresh sessions:', error);
+      } finally {
+        if (active) {
+          setLoading(false);
+          timer = setTimeout(poll, 1000);
+        }
+      }
+    };
+    poll();
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [currentPage, pageSize, sessionType, searchKeyword]);
 
   const [columns, setColumns] = useState(
     originColumns.map((column, index) => {

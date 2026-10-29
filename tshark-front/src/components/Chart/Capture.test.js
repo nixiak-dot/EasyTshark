@@ -94,3 +94,72 @@ test('ignores stale StrictMode cleanup after trend monitoring remounts', async (
   unmount();
   await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/api/stopMonitorAdapterFlowTrend'));
 });
+
+test.each([
+  ['last selected adapter', ['Ethernet']],
+  ['one of multiple adapters', ['Ethernet', 'Wi-Fi']],
+])('removes and persists %s, then restarts only the remaining monitors', async (_, initialNames) => {
+  let selectedNames = initialNames;
+  apiGet.mockImplementation(async (path) => {
+    if (path === '/api/getNetworkAdapters') return { code: '200', data: {
+      adapters: adapters.map((adapter) => ({ ...adapter, selected: selectedNames.includes(adapter.name) })),
+    } };
+    if (path === '/api/getAdapterFlowTrendData') return { code: '200', data: {} };
+    return { code: '200' };
+  });
+  apiPost.mockImplementation(async (_, payload) => {
+    selectedNames = payload.adapterNames;
+    return { code: '200' };
+  });
+  const view = render(<Capture />);
+  await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/api/getAdapterFlowTrendData'));
+  apiGet.mockClear();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Remove Ethernet from trend monitoring' }));
+  const remainingNames = initialNames.filter((name) => name !== 'Ethernet');
+  await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/api/settings/trendAdapters', { adapterNames: remainingNames }));
+  await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/api/getAdapterFlowTrendData'));
+  expect(apiGet).toHaveBeenCalledWith('/api/stopMonitorAdapterFlowTrend');
+  expect(apiGet).not.toHaveBeenCalledWith('/api/startMonitorAdapterFlowTrend?adapterName=Ethernet');
+  for (const name of remainingNames) {
+    expect(apiGet).toHaveBeenCalledWith(`/api/startMonitorAdapterFlowTrend?adapterName=${name}`);
+  }
+  expect(screen.getByRole('button', { name: 'Add Ethernet to trend monitoring' })).toBeInTheDocument();
+
+  view.unmount();
+  await act(async () => {});
+  apiGet.mockClear();
+  render(<Capture />);
+  await screen.findByRole('button', { name: 'Add Ethernet to trend monitoring' });
+  await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/api/getAdapterFlowTrendData'));
+  expect(apiGet).not.toHaveBeenCalledWith('/api/startMonitorAdapterFlowTrend?adapterName=Ethernet');
+});
+
+test('stops polling when the last selected adapter is removed', async () => {
+  jest.useFakeTimers();
+  apiGet.mockImplementation(async (path) => path === '/api/getNetworkAdapters'
+    ? { code: '200', data: { adapters } } : { code: '200', data: {} });
+  apiPost.mockResolvedValue({ code: '200' });
+  await act(async () => { render(<Capture />); });
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Ethernet from trend monitoring' }));
+  });
+  expect(apiPost).toHaveBeenCalledWith('/api/settings/trendAdapters', { adapterNames: [] });
+  expect(apiGet).toHaveBeenCalledWith('/api/stopMonitorAdapterFlowTrend');
+  const requests = apiGet.mock.calls.length;
+  await act(async () => { jest.advanceTimersByTime(3000); });
+  expect(apiGet).toHaveBeenCalledTimes(requests);
+});
+
+test('keeps the adapter selected and monitoring when removal cannot be saved', async () => {
+  apiGet.mockImplementation(async (path) => path === '/api/getNetworkAdapters'
+    ? { code: '200', data: { adapters } } : { code: '200', data: {} });
+  apiPost.mockResolvedValue({ code: '400', msg: 'Save failed' });
+  render(<Capture />);
+  await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/api/getAdapterFlowTrendData'));
+  apiGet.mockClear();
+  fireEvent.click(screen.getByRole('button', { name: 'Remove Ethernet from trend monitoring' }));
+  await screen.findByText('Save failed');
+  expect(screen.getByRole('button', { name: 'Remove Ethernet from trend monitoring' })).toBeInTheDocument();
+  expect(apiGet).not.toHaveBeenCalledWith('/api/stopMonitorAdapterFlowTrend');
+});

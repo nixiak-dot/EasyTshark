@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Button, Card, Message, Typography } from '@arco-design/web-react';
-import { IconPlus, IconRefresh } from '@arco-design/web-react/icon';
+import { IconMinus, IconPlus, IconRefresh } from '@arco-design/web-react/icon';
 import '../../style/home.css';
 import LineChart from './LineChart.js';
 import { apiGet, apiPost } from '../../Api.ts';
@@ -60,6 +60,22 @@ function Capture({ type = '', onsubmit = null }) {
             Message.success('Adapter added. Refresh trends to start monitoring.');
         } catch (error) {
             Message.error(error?.response?.data?.msg || error.message || 'Unable to save trend adapters');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const removeAdapter = async (adapterName) => {
+        const nextAdapters = adapters.map((adapter) =>
+            adapter.name === adapterName ? { ...adapter, selected: false } : adapter);
+        const selectedNames = nextAdapters.filter((adapter) => adapter.selected).map((adapter) => adapter.name);
+        setLoading(true);
+        try {
+            assertSuccess(await apiPost('/api/settings/trendAdapters', { adapterNames: selectedNames }), 'Unable to save trend adapters');
+            setAdapters(nextAdapters);
+            await refreshTrends(nextAdapters);
+        } catch (error) {
+            Message.error(error?.response?.data?.msg || error.message || 'Unable to remove trend adapter');
         } finally {
             setLoading(false);
         }
@@ -140,10 +156,16 @@ function Capture({ type = '', onsubmit = null }) {
                             <span className='adapter-trend-placeholder'>未加入趋势监听</span>}</div>
                         <div className='adapter-trend-action'>
                                 {adapter.selected ? (
-                                    <Button type='primary' loading={loading} disabled={refreshing}
-                                        size={type ? 'small' : 'default'}
-                                        title={`在 ${adapter.name} 上抓包`}
-                                        onClick={() => startCapture(adapter.name)}>{'\u6293\u5305'}</Button>
+                                    <>
+                                        <Button type='primary' loading={loading} disabled={refreshing}
+                                            size={type ? 'small' : 'default'}
+                                            title={`在 ${adapter.name} 上抓包`}
+                                            onClick={() => startCapture(adapter.name)}>{'\u6293\u5305'}</Button>
+                                        <Button aria-label={`Remove ${adapter.name} from trend monitoring`}
+                                            title={`将 ${adapter.name} 移出趋势监听`} disabled={loading || refreshing}
+                                            size={type ? 'small' : 'default'} icon={<IconMinus />}
+                                            onClick={() => removeAdapter(adapter.name)} />
+                                    </>
                                 ) : (
                                     <Button aria-label={`Add ${adapter.name} to trend monitoring`} title={`将 ${adapter.name} 加入趋势监听`}
                                         disabled={loading || refreshing} size={type ? 'small' : 'default'}

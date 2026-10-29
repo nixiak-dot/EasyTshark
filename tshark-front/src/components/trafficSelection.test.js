@@ -231,6 +231,75 @@ test('packet refresh falls back to the first available row only when the selecti
   expect(screen.getByTestId('row-4')).toHaveClass('selected-row');
 });
 
+test('session polling updates rows without resetting selection and stops after unmount', async () => {
+  jest.useFakeTimers();
+  let view;
+  await act(async () => { view = render(<SessionPage match={{ params: { type: 'all' } }} />); });
+  fireEvent.click(screen.getByTestId('row-2'));
+  sessionRows = [{ session_id: 2 }, { session_id: 3 }];
+  await act(async () => { jest.advanceTimersByTime(1000); });
+  expect(screen.getByTestId('row-3')).toBeInTheDocument();
+  expect(screen.getByTestId('row-2')).toHaveClass('selected-row');
+  expect(screen.getByTestId('traffic-table')).toHaveAttribute('data-loading', 'false');
+  const requests = apiPost.mock.calls.length;
+  view.unmount();
+  await act(async () => { jest.advanceTimersByTime(3000); });
+  expect(apiPost).toHaveBeenCalledTimes(requests);
+});
+
+test('session polling waits for a slow request before scheduling another', async () => {
+  jest.useFakeTimers();
+  let finishRequest;
+  apiPost.mockImplementationOnce(() => new Promise((resolve) => { finishRequest = resolve; }));
+  await act(async () => { render(<SessionPage match={{ params: { type: 'all' } }} />); });
+  await act(async () => { jest.advanceTimersByTime(5000); });
+  expect(apiPost).toHaveBeenCalledTimes(1);
+  await act(async () => { finishRequest({ data: sessionRows, total: 2 }); });
+  await act(async () => { jest.advanceTimersByTime(1000); });
+  expect(apiPost).toHaveBeenCalledTimes(2);
+});
+
+test('session polling retries after a failed request', async () => {
+  jest.useFakeTimers();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  apiPost.mockRejectedValueOnce(new Error('Network error'));
+  await act(async () => { render(<SessionPage match={{ params: { type: 'all' } }} />); });
+  expect(screen.getByTestId('traffic-table')).toHaveAttribute('data-loading', 'false');
+  await act(async () => { jest.advanceTimersByTime(1000); });
+  expect(apiPost).toHaveBeenCalledTimes(2);
+  expect(screen.getByTestId('row-2')).toBeInTheDocument();
+});
+
+test('session polling retains the current page and submitted filter', async () => {
+  jest.useFakeTimers();
+  await act(async () => { render(<SessionPage match={{ params: { type: 'all' } }} />); });
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'proto=TCP' } });
+  await act(async () => { fireEvent.click(screen.getByText('筛选')); });
+  await act(async () => { fireEvent.click(screen.getByText('Next page')); });
+  apiPost.mockClear();
+  await act(async () => { jest.advanceTimersByTime(1000); });
+  expect(apiPost).toHaveBeenCalledTimes(1);
+  expect(apiPost).toHaveBeenCalledWith('/api/getSessionList', {
+    pageSize: 30, pageNum: 2, filterExpression: 'proto=TCP',
+  });
+});
+
+test('session polling ignores a stale response after the filter changes', async () => {
+  jest.useFakeTimers();
+  let finishOldRequest;
+  apiPost.mockImplementationOnce(() => new Promise((resolve) => { finishOldRequest = resolve; }));
+  await act(async () => { render(<SessionPage match={{ params: { type: 'all' } }} />); });
+  sessionRows = [{ session_id: 3 }];
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'proto=TCP' } });
+  await act(async () => { fireEvent.click(screen.getByText('筛选')); });
+  await act(async () => { finishOldRequest({ data: [{ session_id: 9 }], total: 1 }); });
+  expect(screen.getByTestId('row-3')).toBeInTheDocument();
+  expect(screen.queryByTestId('row-9')).not.toBeInTheDocument();
+  apiPost.mockClear();
+  await act(async () => { jest.advanceTimersByTime(1000); });
+  expect(apiPost).toHaveBeenCalledTimes(1);
+});
+
 test('session list preserves the selected session when its data is replaced', async () => {
   render(<SessionPage match={{ params: { type: 'tcp' } }} />);
   await screen.findByTestId('row-2');

@@ -13,11 +13,11 @@
 
 .adapter-trend-row {
   box-sizing: border-box;
-  width: calc(200% / 3);
+  width: 90%;
   min-width: min(100%, 360px);
   max-width: 100%;
   display: grid;
-  grid-template-columns: minmax(110px, 1fr) minmax(0, 3fr) auto;
+  grid-template-columns: minmax(110px, 1fr) minmax(0, 3fr) max-content;
   align-items: center;
   gap: 16px;
   min-height: 62px;
@@ -52,6 +52,7 @@
 
 .adapter-trend-chart {
   min-width: 0;
+  overflow: hidden;
 }
 
 .adapter-trend-placeholder {
@@ -60,8 +61,16 @@
 }
 
 .adapter-trend-action {
-  min-width: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: max-content;
   text-align: right;
+}
+
+.adapter-trend-action > button {
+  flex-shrink: 0;
 }
 
 .home .analysis-section-title {
