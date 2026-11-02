@@ -1,8 +1,8 @@
 import { useState, forwardRef ,useEffect,useImperativeHandle,useRef,useCallback} from 'react';
-import { Table,Pagination,Tree,Input,Button } from '@arco-design/web-react';
+import { Table,Pagination,Tree } from '@arco-design/web-react';
 import { Resizable } from 'react-resizable';
 import useContentColumnWidths from './useContentColumnWidths';
-import FilterHelp from './FilterHelp';
+import TrafficFilterBar from './TrafficFilterBar';
 import { buildProtocolTree, packetByteRange } from './packetProtocolTree';
 import dayjs from 'dayjs';
 import { apiPost,apiGet } from '../Api.ts';
@@ -130,7 +130,8 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
   const [treeData,setTreeData] = useState([]);
   const [detailError, setDetailError] = useState('');
   const [selectedKeys, setSelectedKeys] = useState([]);
-  const [currentRowId,setCurrentRowId] = useState(1);
+  const [currentRowId,setCurrentRowId] = useState(null);
+  const [scrollTarget, setScrollTarget] = useState(null);
 
  // 十六进制数据相关
   const [offsetData, setOffsetData] = useState([])
@@ -155,12 +156,13 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
 
   const packetType = props.match.params.type;
   const packetSessionId = props.match.params.sessionId;
+  const filterExpression = props.filterExpression ?? searchKeyword;
   const loadData = useCallback(({ silent = false } = {}) => {
     const payload = {
       pageSize,
       pageNum: currentPage,
       session_id: packetType === 'detail' ? parseInt(packetSessionId) : 0,
-      filterExpression: searchKeyword,
+      filterExpression,
     };
     const key = JSON.stringify([payload, reloadCount]);
     if (pendingRequestRef.current?.key === key) return pendingRequestRef.current.promise;
@@ -194,7 +196,7 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
       }
     })();
     return request.promise;
-  }, [currentPage, pageSize, packetType, packetSessionId, searchKeyword, reloadCount]);
+  }, [currentPage, pageSize, packetType, packetSessionId, filterExpression, reloadCount]);
 
   useEffect(() => {
     loadData();
@@ -207,30 +209,37 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
   
   // 暴露方法给父组件
   const reloadData = () => {
+    setScrollTarget(null)
     setDataList([])
     setTreeData([])
     setOffsetData([])
     setHexData([])
     setAscData([])
     setCurrentPage(1)
-    setCurrentRowId(1)
+    setCurrentRowId(null)
     setReloadCount(reloadCount + 1)
   }
   useImperativeHandle(ref, () => ({
-    setCurrentRowId: setCurrentRowId,
+    setCurrentRowId: (frameNumber, packetIndex) => {
+      const page = Number.isInteger(packetIndex) ? Math.floor(packetIndex / pageSize) + 1 : currentPage;
+      setScrollTarget({ frameNumber, page });
+      setCurrentPage(page);
+      setCurrentRowId(frameNumber);
+    },
     reloadData: reloadData,
     loadData: loadData,
   }));
 
   useEffect(() => {
-    if (dataList.length > 0) {
+    if (dataList.length === 0 && !scrollTarget) setCurrentRowId(null);
+    if (dataList.length > 0 && !scrollTarget) {
       setCurrentRowId((selectedId) =>
         dataList.some((record) => record.frame_number === selectedId)
           ? selectedId
           : dataList[0].frame_number
       );
     }
-  }, [dataList]);
+  }, [dataList, scrollTarget]);
 
   useEffect(() => {
     if (packetType === 'detail') return undefined;
@@ -288,6 +297,24 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
 
   const tableRef = useContentColumnWidths(dataList, setColumns);
   const tableWidth = columns.reduce((totalWidth, column) => totalWidth + column.width, 0);
+
+  useEffect(() => {
+    if (!scrollTarget || scrollTarget.page !== currentPage ||
+        !dataList.some((record) => record.frame_number === scrollTarget.frameNumber)) return;
+    const body = tableRef.current?.querySelector('.arco-table-body');
+    const row = body?.querySelector('.selected-row');
+    if (!body || !row) return;
+    const bodyBounds = body.getBoundingClientRect();
+    const rowBounds = row.getBoundingClientRect();
+    const visibleTop = bodyBounds.top + body.clientTop;
+    const visibleBottom = visibleTop + body.clientHeight;
+    if (rowBounds.top < visibleTop) {
+      body.scrollTop += rowBounds.top - visibleTop;
+    } else if (rowBounds.bottom > visibleBottom) {
+      body.scrollTop += rowBounds.bottom - visibleBottom;
+    }
+    setScrollTarget(null);
+  }, [scrollTarget, currentPage, dataList, tableRef]);
 
   const components = {
     header: {
@@ -382,17 +409,8 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
     <div>
       {listError && <div role='alert'>{listError}</div>}
       {props.match.params.type !== 'detail' && (
-        <div className='traffic-filter-bar'>
-          <Input
-            value={searchInput}
-            placeholder='如 src.ip=192.0.2.1 && dst.port=443 && proto=TCP'
-            onChange={setSearchInput}
-            onPressEnter={submitSearch}
-          />
-          <Button type='primary' onClick={submitSearch}>筛选</Button>
-          <Button onClick={clearSearch} disabled={!searchInput && !searchKeyword}>清除</Button>
-          <FilterHelp scope='packets' />
-        </div>
+        <TrafficFilterBar value={searchInput} appliedValue={searchKeyword}
+          onChange={setSearchInput} onSubmit={submitSearch} onClear={clearSearch} />
       )}
       <Resizable
         width={0}

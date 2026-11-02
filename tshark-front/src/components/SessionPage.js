@@ -1,8 +1,8 @@
 import { useState, forwardRef ,useEffect} from 'react';
-import { Table,Pagination,Button,Input } from '@arco-design/web-react';
+import { Table,Pagination,Button } from '@arco-design/web-react';
 import { Resizable } from 'react-resizable';
 import useContentColumnWidths from './useContentColumnWidths';
-import FilterHelp from './FilterHelp';
+import TrafficFilterBar from './TrafficFilterBar';
 import dayjs from 'dayjs';
 import { apiPost } from '../Api.ts';
 const originColumns = [
@@ -238,17 +238,8 @@ function SessionPage(props) {
   return (
     <div>
       {props.match.params.type !== 'detail' && (
-        <div className='traffic-filter-bar'>
-          <Input
-            value={searchInput}
-            placeholder='如 src.ip=192.0.2.1 && dst.port=443 && proto=TCP'
-            onChange={setSearchInput}
-            onPressEnter={submitSearch}
-          />
-          <Button type='primary' onClick={submitSearch}>筛选</Button>
-            <Button onClick={clearSearch} disabled={!searchInput && !searchKeyword}>清除</Button>
-            <FilterHelp scope='sessions' />
-        </div>
+        <TrafficFilterBar value={searchInput} appliedValue={searchKeyword} scope='sessions'
+          onChange={setSearchInput} onSubmit={submitSearch} onClear={clearSearch} />
       )}
       <div ref={tableRef} className="table-window table-window-session">
       <Table

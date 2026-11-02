@@ -1,151 +1,164 @@
-import React, { useState, useEffect, useRef} from 'react';
-import "../../style/global.css"
-import {  Grid ,Tag, Typography } from '@arco-design/web-react';
-import { calculateDuration } from '../../util.ts'
+import React, { useState, useEffect, useRef } from 'react';
+import { Alert, Card, Empty, Spin, Tag, Typography } from '@arco-design/web-react';
+import { IconArrowRight } from '@arco-design/web-react/icon';
+import { calculateDuration } from '../../util.ts';
 import { apiPost } from '../../Api.ts';
-import DataPacketPage from '../DataPacketPage.js';
+import DataPacketPage from '../DataPacketPage';
+import TrafficFilterBar from '../TrafficFilterBar';
+import '../../style/global.css';
+import '../../style/session-time-graph.css';
 
-
-const { Ellipsis } = Typography
-
-
-function SessionTimeGraphTab({sessionId}) {
-
-    const [data, setData] = useState([])
-    const [currentRowId, setCurrentRowId] = useState([1])
-    const [record, setRecord] = useState(JSON.parse(localStorage.getItem(`row${sessionId}`)))
-    const DataPacketPageRef = useRef(null);
-
-    const loadTimeGraph = async () => {
-        const _data = await apiPost('/api/queryPacket', {
-            pageSize: 100,
-            pageNum: 1,
-            session_id: parseInt(sessionId)
-        });
-    
-        setData(_data.data);
-        if (_data.data && _data.data.length > 0) {
-            setCurrentRowId(_data.data[0].frame_number);
-        }
-    }
-
-    useEffect(() => {
-        loadTimeGraph()
-    }, [])
-    
-
-    return (
-        <div style={{ margin: 20 }} className='details'>
-            <div style={{ margin: '0 10px 10px 10px' }}>
-                <Grid.Row gutter={24} style={{ flexFlow: 'nowrap' }}>
-                    <Typography.Paragraph style={{ minWidth: 450 }}>
-                    <Grid.Col span={14} className='details-col'>
-                      <div className='first-col'>
-                        {/* IP1 信息 */}
-                        <div style={{ width: 180, flexShrink: 0 }}>
-                          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-text-1)' }}>
-                            <Typography.Ellipsis showTooltip>{record.ip1}:{record.ip1_port}</Typography.Ellipsis>
-                          </div>
-                          <Ellipsis showTooltip style={{ fontSize: '11px', color: 'var(--color-text-3)', marginTop: '2px' }}>
-                            {record.ip1_location}
-                          </Ellipsis>
-                        </div>
-
-                        {/* 中间协议信息 */}
-                        <div style={{ textAlign: 'center', padding: '0 10px', flexShrink: 0 }}>
-                          <div className='arrow'>
-                            <span className="proto" style={{ display: 'block', marginBottom: '4px' }}>
-                              <Tag 
-                                bordered 
-                                color='arcoblue' 
-                                size='small'
-                                style={{ fontSize: '11px', padding: '0 6px', height: '20px' }}
-                              >
-                                {record.app_proto || record.trans_proto}
-                              </Tag>
-                            </span>
-                            <span className="icon"></span>
-                          </div>
-                          <span style={{ fontSize: '11px', color: 'var(--color-text-3)', marginTop: '3px', display: 'inline-block' }}>
-                            {calculateDuration(record.start_time, record.end_time)}
-                          </span>
-                        </div>
-
-                        {/* IP2 信息 */}
-                        <div style={{ width: 180, flexShrink: 0 }}>
-                          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--color-text-1)' }}>
-                            <Typography.Ellipsis showTooltip>{record.ip2}:{record.ip2_port}</Typography.Ellipsis>
-                          </div>
-                          <Ellipsis showTooltip style={{ fontSize: '11px', color: 'var(--color-text-3)', marginTop: '2px' }}>
-                            {record.ip2_location}
-                          </Ellipsis>
-                        </div>
-                      </div>
-
-                      {/* 数据包列表 */}
-                      {data.map((item, index) => {
-                        const isInbound = item.src_ip === record.ip1;
-                        const timeOffset = index === 0 
-                          ? '0.000000' 
-                          : ((item.timestamp - data[0].timestamp).toFixed(6));
-
-                        return (
-                          <div 
-                            key={item.frame_number}
-                            className={`box ${currentRowId === item.frame_number ? 'selected' : ''}`}
-                            onClick={() => (
-                              setCurrentRowId(item.frame_number),
-                              DataPacketPageRef.current?.setCurrentRowId(item.frame_number)
-                              
-                            )}
-                          >
-                            {/* 左侧：序号和时间 */}
-                            <div className="left-section">
-                              <div className="frame-number">{item.frame_number}</div>
-                              <div className="time-offset">{timeOffset}s</div>
-                            </div>
-
-                            {/* 中间：箭头 */}
-                            <div className="arrow-section">
-                              <div className={`arrow ${isInbound ? 'arrow-left' : 'arrow-right'}`}>
-                                <span className="icon"></span>
-                                <div className="port-direction">
-                                  {isInbound ? `${record.ip1_port} ← ${record.ip2_port}` : `${record.ip2_port} → ${record.ip1_port}`}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* 右侧：数据包信息 */}
-                            <div className="packet-info-section">
-                              <div className="flex items-center">
-                                <div className="packet-length">{item.len} B</div>
-                                <Typography.Ellipsis showTooltip className="packet-info">
-                                  {item.info}
-                                </Typography.Ellipsis>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </Grid.Col>
-                    </Typography.Paragraph>
-                    <Grid.Col span={17} style={{ marginTop: -10, flexGrow: 1 }}>
-                        <DataPacketPage
-                          ref={DataPacketPageRef}
-                          match={{
-                            params:{
-                                type:"detail",
-                                sessionId: sessionId
-                            }
-                          }}
-                        ></DataPacketPage>
-                    </Grid.Col>
-                </Grid.Row>
-                </div>
-            </div>
-    )
-    
+function readSession(sessionId) {
+  try {
+    return JSON.parse(localStorage.getItem(`row${sessionId}`)) || {};
+  } catch {
+    return {};
+  }
 }
 
+function Endpoint({ label, ip, port, location }) {
+  return (
+    <div className='session-endpoint'>
+      <span className='session-eyebrow'>{label}</span>
+      <Typography.Ellipsis showTooltip className='session-endpoint-address'>
+        {ip || '未知地址'}{port != null ? `:${port}` : ''}
+      </Typography.Ellipsis>
+      <Typography.Ellipsis showTooltip className='session-muted'>{location || '未知归属地'}</Typography.Ellipsis>
+    </div>
+  );
+}
 
-export default SessionTimeGraphTab
+export default function SessionTimeGraphTab({ sessionId }) {
+  const [data, setData] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [currentRowId, setCurrentRowId] = useState(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [filterExpression, setFilterExpression] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const packetPageRef = useRef(null);
+  const record = readSession(sessionId);
+  const transport = record.trans_proto || '';
+  const application = record.app_proto || '';
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError('');
+    setData([]);
+    setTotal(0);
+    setCurrentRowId(null);
+    apiPost('/api/queryPacket', {
+      pageSize: 100,
+      pageNum: 1,
+      session_id: parseInt(sessionId),
+      filterExpression,
+    }).then((response) => {
+      if (!active) return;
+      if (!Array.isArray(response?.data) || (response.code !== undefined && String(response.code) !== '200')) {
+        throw new Error(response?.msg || '时序图加载失败');
+      }
+      setData(response.data);
+      setTotal(response.total ?? response.data.length);
+      setCurrentRowId(response.data[0]?.frame_number ?? null);
+    }).catch((failure) => {
+      if (active) setError(failure.message || '时序图加载失败，请重试。');
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, [sessionId, filterExpression]);
+
+  const selectPacket = (item, index) => {
+    setCurrentRowId(item.frame_number);
+    packetPageRef.current?.setCurrentRowId(item.frame_number, index);
+  };
+
+  return (
+    <div className='session-time-view'>
+      <TrafficFilterBar value={searchInput} appliedValue={filterExpression}
+        onChange={setSearchInput} onSubmit={() => setFilterExpression(searchInput.trim())}
+        onClear={() => { setSearchInput(''); setFilterExpression(''); }} />
+      <div className='session-detail-layout'>
+        <div className='session-timeline-column'>
+          <Card className='session-summary' bordered={false}>
+            <div className='session-summary-heading'>
+              <div><span className='session-eyebrow'>SESSION / {sessionId}</span><h3>会话概览</h3></div>
+              <div className='session-protocol-tags'>
+                {transport && <Tag color='arcoblue'>{transport}</Tag>}
+                {application && application !== transport && <Tag color='purple'>{application}</Tag>}
+                {!transport && !application && <Tag>未知协议</Tag>}
+              </div>
+            </div>
+            <div className='session-summary-endpoints'>
+              <Endpoint label='端点一' ip={record.ip1} port={record.ip1_port} location={record.ip1_location} />
+              <div className='session-summary-connection'>
+                <span className='session-muted'>双向会话</span>
+                <div className='session-summary-arrows' role='img' aria-label='蓝色：端点一到端点二；绿色：端点二到端点一'>
+                  <div className='session-summary-direction is-forward' aria-hidden='true'><IconArrowRight /></div>
+                  <div className='session-summary-direction is-backward' aria-hidden='true'><IconArrowRight /></div>
+                </div>
+                <span className='session-muted'>
+                  {record.start_time && record.end_time ? calculateDuration(record.start_time, record.end_time) : '时长未知'}
+                </span>
+              </div>
+              <Endpoint label='端点二' ip={record.ip2} port={record.ip2_port} location={record.ip2_location} />
+            </div>
+          </Card>
+
+          <Card className='session-timeline-panel' bordered={false}>
+          <div className='session-panel-heading'>
+            <h3>数据包时序</h3>
+            <Tag color='gray'>{total} 个数据包</Tag>
+          </div>
+          {error && <Alert type='error' content={error} />}
+          <Spin loading={loading} className='session-timeline-spin'>
+            <div className='session-timeline-list' aria-label='会话数据包时序'>
+              {!loading && !error && data.length === 0 && <Empty description='没有符合条件的数据包' />}
+              {data.map((item, index) => {
+                const forward = item.src_ip === record.ip1 &&
+                  (record.ip1_port == null || String(item.src_port) === String(record.ip1_port));
+                const protocol = item.protocol || '未知协议';
+                const transportOnly = ['TCP', 'UDP', 'SCTP', 'ICMP', 'ICMPV6'].includes(protocol.toUpperCase());
+                const offset = ((Number(item.timestamp) - Number(data[0].timestamp)) || 0).toFixed(6);
+                return (
+                  <Card key={item.frame_number} hoverable role='button' tabIndex={0}
+                    className={`session-packet-card ${forward ? 'is-forward' : 'is-backward'} ${currentRowId === item.frame_number ? 'is-selected' : ''}`}
+                    aria-pressed={currentRowId === item.frame_number}
+                    aria-label={`数据包 ${item.frame_number}，${protocol}，${item.len} 字节`}
+                    onClick={() => selectPacket(item, index)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        selectPacket(item, index);
+                      }
+                    }}>
+                    <div className='session-packet-meta'>
+                      <span className='session-frame-number'>{item.frame_number}</span>
+                      <span className='session-time-offset'>+{offset} s</span>
+                      <span className='session-packet-size'>{item.len} <small>B</small></span>
+                    </div>
+                    <div className='session-packet-content'>
+                      <div className='session-packet-protocol'>
+                        <Tag color={transportOnly ? 'arcoblue' : protocol === '未知协议' ? 'gray' : 'purple'} size='small'>{protocol}</Tag>
+                        <span className='session-muted'>{transportOnly ? '网络 / 传输层' : protocol === '未知协议' ? '协议未识别' : '应用层协议'}</span>
+                      </div>
+                      <Typography.Ellipsis showTooltip rows={2} className='session-packet-info'>{item.info || '暂无数据包信息'}</Typography.Ellipsis>
+                    </div>
+                  </Card>
+                );
+              })}
+              {total > data.length && data.length > 0 && <div className='session-timeline-limit'>时序图显示前 {data.length} 个匹配包，其余可在右侧列表翻页查看。</div>}
+            </div>
+          </Spin>
+          </Card>
+        </div>
+        <div className='session-packet-detail'>
+          <div className='session-panel-heading'><h3>数据包列表与解析</h3><span className='session-muted'>保留原始顺序</span></div>
+          <DataPacketPage key={`${sessionId}:${filterExpression}`} ref={packetPageRef}
+            filterExpression={filterExpression} match={{ params: { type: 'detail', sessionId } }} />
+        </div>
+      </div>
+    </div>
+  );
+}

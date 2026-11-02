@@ -69,22 +69,12 @@ function SessionDataStreamhTab({ sessionId }) {
     } finally {
       setLoading(false);
     }
-  }, [record, sessionId]);
+  }, [record]);
 
   // 修正后的数据请求逻辑
   useEffect(() => {
     fetchData(filter);
   }, [filter, fetchData]); // 移除这里的清理函数
-
-  // 修正后的缓存清理逻辑：仅在 sessionId 变化或组件卸载时执行
-  useEffect(() => {
-    return () => {
-      if (sessionId) {
-        localStorage.removeItem(`row${sessionId}`);
-      }
-    };
-  }, [sessionId]);
-
 
   // 渲染内容逻辑块
   const renderContent = () => {

@@ -13,7 +13,7 @@ jest.mock('./useContentColumnWidths', () => ({
 jest.mock('react-resizable', () => ({ Resizable: ({ children }) => children }));
 jest.mock('@arco-design/web-react', () => ({
   Table: ({ data, rowKey, rowClassName, onRow, loading }) => (
-    <div data-testid='traffic-table' data-loading={String(Boolean(loading))}>{data.map((record) => (
+    <div className='arco-table-body' data-testid='traffic-table' data-loading={String(Boolean(loading))}>{data.map((record) => (
       <button
         key={record[rowKey]}
         data-testid={`row-${record[rowKey]}`}
@@ -45,6 +45,7 @@ let packetRows;
 let sessionRows;
 
 beforeEach(() => {
+  useContentColumnWidths.mockImplementation(() => ({ current: null }));
   packetRows = packets([1, 2, 3]);
   sessionRows = [{ session_id: 1 }, { session_id: 2 }];
   apiGet.mockResolvedValue({ code: '200', data: { status: 0 } });
@@ -62,6 +63,85 @@ afterEach(() => {
   jest.useRealTimers();
   jest.restoreAllMocks();
   jest.clearAllMocks();
+});
+
+test.each([
+  ['below the viewport', 350, 390, 290],
+  ['above the viewport', 50, 90, 150],
+  ['already visible', 130, 170, 200],
+])('timeline selection scrolls only when %s without reordering packets', async (label, top, bottom, expectedScrollTop) => {
+  useContentColumnWidths.mockImplementation(() => React.useRef(null));
+  const ref = createRef();
+  render(<DataPacketPage ref={ref} match={{ params: { type: 'detail', sessionId: '7' } }} />);
+  const row = await screen.findByTestId('row-3');
+  const body = screen.getByTestId('traffic-table');
+  Object.defineProperty(body, 'clientHeight', { configurable: true, value: 200 });
+  jest.spyOn(body, 'getBoundingClientRect').mockReturnValue({ top: 100, bottom: 300 });
+  jest.spyOn(row, 'getBoundingClientRect').mockReturnValue({ top, bottom });
+  body.scrollTop = 200;
+  body.scrollLeft = 75;
+
+  await act(async () => ref.current.setCurrentRowId(3, 2));
+
+  expect(row).toHaveClass('selected-row');
+  expect(body.scrollTop).toBe(expectedScrollTop);
+  expect(body.scrollLeft).toBe(75);
+  expect(Array.from(body.children, (element) => element.textContent)).toEqual(['1', '2', '3']);
+
+  body.scrollTop = 200;
+  await act(async () => ref.current.setCurrentRowId(3, 2));
+  expect(body.scrollTop).toBe(expectedScrollTop);
+});
+
+test('timeline selection loads the target page before scrolling to its packet', async () => {
+  useContentColumnWidths.mockImplementation(() => React.useRef(null));
+  const originalImplementation = apiPost.getMockImplementation();
+  let resolvePage;
+  apiPost.mockImplementation((path, payload) => {
+    if (path === '/api/queryPacket' && payload.pageNum === 2) {
+      return new Promise((resolve) => { resolvePage = resolve; });
+    }
+    return originalImplementation(path, payload);
+  });
+  const ref = createRef();
+  render(<DataPacketPage ref={ref} match={{ params: { type: 'detail', sessionId: '7' } }} />);
+  await screen.findByTestId('row-1');
+  const body = screen.getByTestId('traffic-table');
+  Object.defineProperty(body, 'clientHeight', { configurable: true, value: 200 });
+  jest.spyOn(body, 'getBoundingClientRect').mockReturnValue({ top: 100, bottom: 300 });
+  jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ top: 350, bottom: 390 });
+
+  await act(async () => ref.current.setCurrentRowId(99, 31));
+  expect(apiPost).toHaveBeenCalledWith('/api/queryPacket', {
+    pageSize: 30, pageNum: 2, session_id: 7, filterExpression: '',
+  });
+  await act(async () => resolvePage({ data: packets([90, 99, 105]), total: 60 }));
+
+  expect(screen.getByTestId('row-99')).toHaveClass('selected-row');
+  expect(body.scrollTop).toBe(90);
+  expect(Array.from(body.children, (element) => element.textContent)).toEqual(['90', '99', '105']);
+});
+
+test('session packet lists reuse the shared filter expression without showing a second filter bar', async () => {
+  const expression = '(proto=TCP || proto=HTTPS) && dst.port=443';
+  render(<DataPacketPage filterExpression={expression} match={{ params: { type: 'detail', sessionId: '7' } }} />);
+  await screen.findByTestId('row-1');
+  expect(apiPost).toHaveBeenCalledWith('/api/queryPacket', {
+    pageSize: 30, pageNum: 1, session_id: 7, filterExpression: expression,
+  });
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText('Next page'));
+  await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/api/queryPacket', {
+    pageSize: 30, pageNum: 2, session_id: 7, filterExpression: expression,
+  }));
+});
+
+test('empty session filter results do not display an unrelated packet detail', async () => {
+  packetRows = [];
+  render(<DataPacketPage filterExpression='HTTPS' match={{ params: { type: 'detail', sessionId: '7' } }} />);
+  await waitFor(() => expect(screen.getByTestId('traffic-table')).toHaveAttribute('data-loading', 'false'));
+  expect(apiPost.mock.calls.some(([path]) => path === '/api/getPacketDetail')).toBe(false);
+  expect(screen.getByTestId('protocol-tree')).toHaveTextContent('[]');
 });
 
 test('packet details display nested application-layer fields and repeated answers', async () => {
