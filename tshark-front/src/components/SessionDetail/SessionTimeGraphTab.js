@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Alert, Card, Empty, Spin, Tag, Typography } from '@arco-design/web-react';
+import { Alert, Card, Empty, ResizeBox, Spin, Tag, Typography } from '@arco-design/web-react';
 import { IconArrowRight } from '@arco-design/web-react/icon';
 import { calculateDuration } from '../../util.ts';
 import { apiPost } from '../../Api.ts';
@@ -36,6 +36,7 @@ export default function SessionTimeGraphTab({ sessionId }) {
   const [filterExpression, setFilterExpression] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [splitSize, setSplitSize] = useState(0.5);
   const packetPageRef = useRef(null);
   const record = readSession(sessionId);
   const transport = record.trans_proto || '';
@@ -79,11 +80,37 @@ export default function SessionTimeGraphTab({ sessionId }) {
       <TrafficFilterBar value={searchInput} appliedValue={filterExpression}
         onChange={setSearchInput} onSubmit={() => setFilterExpression(searchInput.trim())}
         onClear={() => { setSearchInput(''); setFilterExpression(''); }} />
-      <div className='session-detail-layout'>
+      <ResizeBox.Split className='session-detail-layout' size={splitSize} min={0.25} max={0.75}
+        onMoving={(_, size) => setSplitSize(Number(size))}
+        trigger={(
+          <div className='session-split-handle' role='separator' tabIndex={0}
+            aria-label='调整会话时序与数据包列表宽度' aria-orientation='vertical'
+            aria-valuemin={25} aria-valuemax={75} aria-valuenow={Math.round(splitSize * 100)}
+            title='左右拖动调整宽度，双击恢复均分'
+            onDoubleClick={() => setSplitSize(0.5)}
+            onKeyDown={(event) => {
+              if (!['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) return;
+              event.preventDefault();
+              setSplitSize((previous) => event.key === 'Home' ? 0.5 :
+                Math.min(0.75, Math.max(0.25, previous + (event.key === 'ArrowRight' ? 0.02 : -0.02))));
+            }}>
+            <span aria-hidden='true' />
+          </div>
+        )}
+        panes={[
         <div className='session-timeline-column'>
+          <Card className='session-panel session-timeline-panel' bordered={false}>
+          <div className='session-panel-heading'>
+            <h3>会话时序</h3>
+            <Tag color='gray'>{total} 个数据包</Tag>
+          </div>
+          {error && <Alert type='error' content={error} />}
+          <Spin loading={loading} className='session-timeline-spin'>
+            <div className='session-timeline-list' aria-label='会话时序'>
+              <div className='session-timeline-packets'>
           <Card className='session-summary' bordered={false}>
             <div className='session-summary-heading'>
-              <div><span className='session-eyebrow'>SESSION / {sessionId}</span><h3>会话概览</h3></div>
+              <span className='session-eyebrow'>SESSION / {sessionId}</span>
               <div className='session-protocol-tags'>
                 {transport && <Tag color='arcoblue'>{transport}</Tag>}
                 {application && application !== transport && <Tag color='purple'>{application}</Tag>}
@@ -106,21 +133,11 @@ export default function SessionTimeGraphTab({ sessionId }) {
             </div>
           </Card>
 
-          <Card className='session-timeline-panel' bordered={false}>
-          <div className='session-panel-heading'>
-            <h3>数据包时序</h3>
-            <Tag color='gray'>{total} 个数据包</Tag>
-          </div>
-          {error && <Alert type='error' content={error} />}
-          <Spin loading={loading} className='session-timeline-spin'>
-            <div className='session-timeline-list' aria-label='会话数据包时序'>
-              {!loading && !error && data.length === 0 && <Empty description='没有符合条件的数据包' />}
               {data.map((item, index) => {
                 const forward = item.src_ip === record.ip1 &&
                   (record.ip1_port == null || String(item.src_port) === String(record.ip1_port));
                 const protocol = item.protocol || '未知协议';
                 const transportOnly = ['TCP', 'UDP', 'SCTP', 'ICMP', 'ICMPV6'].includes(protocol.toUpperCase());
-                const offset = ((Number(item.timestamp) - Number(data[0].timestamp)) || 0).toFixed(6);
                 return (
                   <Card key={item.frame_number} hoverable role='button' tabIndex={0}
                     className={`session-packet-card ${forward ? 'is-forward' : 'is-backward'} ${currentRowId === item.frame_number ? 'is-selected' : ''}`}
@@ -135,7 +152,6 @@ export default function SessionTimeGraphTab({ sessionId }) {
                     }}>
                     <div className='session-packet-meta'>
                       <span className='session-frame-number'>{item.frame_number}</span>
-                      <span className='session-time-offset'>+{offset} s</span>
                       <span className='session-packet-size'>{item.len} <small>B</small></span>
                     </div>
                     <div className='session-packet-content'>
@@ -143,22 +159,24 @@ export default function SessionTimeGraphTab({ sessionId }) {
                         <Tag color={transportOnly ? 'arcoblue' : protocol === '未知协议' ? 'gray' : 'purple'} size='small'>{protocol}</Tag>
                         <span className='session-muted'>{transportOnly ? '网络 / 传输层' : protocol === '未知协议' ? '协议未识别' : '应用层协议'}</span>
                       </div>
-                      <Typography.Ellipsis showTooltip rows={2} className='session-packet-info'>{item.info || '暂无数据包信息'}</Typography.Ellipsis>
+                      <Typography.Text className='session-packet-info'>{item.info || '暂无数据包信息'}</Typography.Text>
                     </div>
                   </Card>
                 );
               })}
+              </div>
+              {!loading && !error && data.length === 0 && <Empty description='没有符合条件的数据包' />}
               {total > data.length && data.length > 0 && <div className='session-timeline-limit'>时序图显示前 {data.length} 个匹配包，其余可在右侧列表翻页查看。</div>}
             </div>
           </Spin>
           </Card>
-        </div>
-        <div className='session-packet-detail'>
+        </div>,
+        <Card className='session-panel session-packet-detail' bordered={false}>
           <div className='session-panel-heading'><h3>数据包列表与解析</h3><span className='session-muted'>保留原始顺序</span></div>
           <DataPacketPage key={`${sessionId}:${filterExpression}`} ref={packetPageRef}
             filterExpression={filterExpression} match={{ params: { type: 'detail', sessionId } }} />
-        </div>
-      </div>
+        </Card>
+      ]} />
     </div>
   );
 }

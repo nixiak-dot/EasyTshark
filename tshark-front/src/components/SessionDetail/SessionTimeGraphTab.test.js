@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, createEvent, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import SessionTimeGraphTab from './SessionTimeGraphTab';
 import { apiPost } from '../../Api.ts';
 import { MemoryRouter } from 'react-router-dom';
@@ -46,7 +46,8 @@ test('compact Arco cards preserve packet fields, actual protocols and directiona
   expect(within(tcp).queryByText('HTTPS')).not.toBeInTheDocument();
   expect(https).toHaveClass('is-backward');
   expect(https).toHaveTextContent('应用层协议');
-  expect(https).toHaveTextContent('+0.250000 s');
+  expect(https.querySelector('.session-time-offset')).not.toBeInTheDocument();
+  expect(https).not.toHaveTextContent('+0.250000 s');
   expect(https).toHaveTextContent('Application Data');
   expect(screen.getAllByText('192.0.2.1:50000')[0]).toBeInTheDocument();
   expect(screen.getAllByText('198.51.100.2:443')[0]).toBeInTheDocument();
@@ -58,6 +59,22 @@ test('compact Arco cards preserve packet fields, actual protocols and directiona
   expect(https).toHaveClass('is-selected', 'is-backward');
   fireEvent.keyDown(tcp, { key: 'Enter' });
   expect(mockSelectPacket).toHaveBeenLastCalledWith(41, 0);
+});
+
+test('compact timeline retains full long info text in a shared intrinsic-width row container', async () => {
+  const longInfo = 'Application Data ' + 'encrypted-payload '.repeat(40);
+  apiPost.mockResolvedValue({ code: '200', data: [packets[0], { ...packets[1], info: longInfo }], total: 2 });
+  const { container } = render(<SessionTimeGraphTab sessionId='7' />);
+  const https = await screen.findByRole('button', { name: '数据包 52，HTTPS，1400 字节' });
+  const rows = container.querySelector('.session-timeline-packets');
+  expect(rows.children).toHaveLength(3);
+  expect(rows.firstElementChild).toHaveClass('session-summary');
+  expect(https.parentElement).toBe(rows);
+  expect(https.querySelector('.session-packet-info').textContent).toBe(longInfo);
+  expect(https.querySelector('.arco-ellipsis')).not.toBeInTheDocument();
+  expect(container.querySelector('.session-time-offset')).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: '会话概览' })).not.toBeInTheDocument();
+  expect(screen.getByText('SESSION / 7')).toBeInTheDocument();
 });
 
 test('visiting the data stream preserves session endpoints across packet selection and a page remount', async () => {
@@ -90,21 +107,70 @@ test('visiting the data stream preserves session endpoints across packet selecti
   expect(screen.getAllByText('198.51.100.2:443')[0]).toBeInTheDocument();
 });
 
-test('the shared filter precedes both columns and the summary stays above the timeline in the left column', async () => {
+test('the shared filter precedes both columns and the summary is the first row inside the session timeline', async () => {
   const { container } = render(<SessionTimeGraphTab sessionId='7' />);
   await screen.findByRole('button', { name: '数据包 41，TCP，66 字节' });
   const layout = container.querySelector('.session-detail-layout');
   const leftColumn = container.querySelector('.session-timeline-column');
   expect(layout.previousElementSibling).toHaveClass('traffic-filter-bar');
-  expect(leftColumn.parentElement).toBe(layout);
-  expect(leftColumn.firstElementChild).toHaveClass('session-summary');
+  expect(leftColumn.parentElement.parentElement).toBe(layout);
+  expect(leftColumn.children).toHaveLength(1);
   expect(leftColumn.lastElementChild).toHaveClass('session-timeline-panel');
-  expect(layout.lastElementChild).toHaveClass('session-packet-detail');
+  const rows = leftColumn.querySelector('.session-timeline-packets');
+  expect(rows.firstElementChild).toHaveClass('session-summary');
+  expect(rows.children[1]).toHaveClass('session-packet-card');
+  expect(rows.closest('.session-timeline-panel')).toBe(leftColumn.firstElementChild);
+  expect(screen.getByRole('heading', { name: '会话时序' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: '数据包时序' })).not.toBeInTheDocument();
+  expect(layout.lastElementChild.firstElementChild).toHaveClass('session-packet-detail');
+  const panels = layout.querySelectorAll('.session-panel');
+  expect(panels).toHaveLength(2);
+  panels.forEach((panel) => {
+    expect(panel).toHaveClass('arco-card');
+    expect(panel.firstElementChild).toHaveClass('arco-card-body');
+    expect(panel.firstElementChild.firstElementChild).toHaveClass('session-panel-heading');
+  });
+  expect(within(panels[0].firstElementChild.firstElementChild).getByRole('heading', { name: '会话时序' })).toBeInTheDocument();
+  expect(within(panels[1].firstElementChild.firstElementChild).getByRole('heading', { name: '数据包列表与解析' })).toBeInTheDocument();
+  expect(panels[1]).toContainElement(screen.getByTestId('packet-list'));
   const arrows = screen.getByRole('img', { name: '蓝色：端点一到端点二；绿色：端点二到端点一' });
   expect(arrows.children[0]).toHaveClass('is-forward');
   expect(arrows.children[1]).toHaveClass('is-backward');
   expect(screen.queryByText('同一筛选条件同时作用于时序图与数据包列表 · 点击时序卡片定位原始数据包')).not.toBeInTheDocument();
   expect(screen.queryByText('按原始顺序展示 · 时间相对当前结果首包')).not.toBeInTheDocument();
+});
+
+test('the Arco split resizes both panes, clamps the ratio and resets without querying packets again', async () => {
+  const { container } = render(<SessionTimeGraphTab sessionId='7' />);
+  await screen.findByRole('button', { name: '数据包 41，TCP，66 字节' });
+  const layout = container.querySelector('.session-detail-layout');
+  Object.defineProperty(layout, 'offsetWidth', { configurable: true, value: 1000 });
+  const separator = screen.getByRole('separator', { name: '调整会话时序与数据包列表宽度' });
+  const drag = (start, end) => {
+    const down = createEvent.mouseDown(separator, { clientX: start });
+    Object.defineProperty(down, 'pageX', { value: start });
+    fireEvent(separator, down);
+    const move = createEvent.mouseMove(window, { clientX: end });
+    Object.defineProperty(move, 'pageX', { value: end });
+    fireEvent(window, move);
+    fireEvent.mouseUp(window);
+  };
+  const requests = apiPost.mock.calls.length;
+  expect(separator).toHaveAttribute('aria-valuenow', '50');
+  drag(500, 300);
+  expect(separator).toHaveAttribute('aria-valuenow', '30');
+  expect(layout.firstElementChild.style.flexBasis).toContain('30%');
+  drag(300, 0);
+  expect(separator).toHaveAttribute('aria-valuenow', '25');
+  drag(0, 2000);
+  expect(separator).toHaveAttribute('aria-valuenow', '75');
+  fireEvent.doubleClick(separator);
+  expect(separator).toHaveAttribute('aria-valuenow', '50');
+  fireEvent.keyDown(separator, { key: 'ArrowLeft' });
+  expect(separator).toHaveAttribute('aria-valuenow', '48');
+  fireEvent.keyDown(separator, { key: 'Home' });
+  expect(separator).toHaveAttribute('aria-valuenow', '50');
+  expect(apiPost.mock.calls).toHaveLength(requests);
 });
 
 test('one shared filter submits existing syntax to both views and clears it', async () => {
@@ -142,6 +208,7 @@ test('empty results and API errors have explicit states', async () => {
   apiPost.mockResolvedValueOnce({ data: [], total: 0 });
   render(<SessionTimeGraphTab sessionId='7' />);
   await screen.findByText('没有符合条件的数据包');
+  expect(screen.getByLabelText('会话时序').querySelector('.session-timeline-packets').firstElementChild).toHaveClass('session-summary');
   apiPost.mockResolvedValueOnce({ code: '400', msg: '筛选表达式无效' });
   fireEvent.change(screen.getByRole('textbox'), { target: { value: 'bad=filter' } });
   fireEvent.click(screen.getByRole('button', { name: '筛选' }));
