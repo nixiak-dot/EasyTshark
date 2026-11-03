@@ -1,0 +1,14 @@
+.session-agent-page { box-sizing: border-box; height: calc(100vh - 90px); min-height: 520px; max-width: 1100px; margin: 0 auto; padding: 16px 24px; }
+.session-agent-drawer .arco-drawer-content { padding: 0; overflow: hidden; min-height: 0; }
+.session-agent-drawer-panel { height: 100%; min-height: 0; overflow: auto; }
+.session-agent-drawer .session-agent-page { height: 100%; min-height: 0; padding: 16px; }
+.session-agent-layout { display: flex; flex-direction: column; height: 100%; gap: 12px; min-height: 0; }
+.session-agent-settings { display: flex; flex-direction: column; gap: 10px; max-height: 45%; overflow: auto; flex-shrink: 0; }
+.session-agent-form { display: grid; gap: 8px; }
+.session-agent-form label { display: grid; gap: 4px; }
+.session-agent-layout small { display: block; color: var(--color-text-3); font-size: 12px; }
+.session-agent-messages { flex: 1; min-height: 100px; overflow: auto; }
+.session-agent-message { padding: 12px; border-radius: 8px; margin-bottom: 10px; background: var(--color-fill-1); }
+.session-agent-message.user { background: var(--color-primary-light-1); }
+.session-agent-message > div { white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0; line-height: 1.7; }
+.session-agent-composer { display: grid; gap: 8px; flex-shrink: 0; }

@@ -90,6 +90,7 @@ test('visiting the data stream preserves session endpoints across packet selecti
     </React.StrictMode>
   );
   const view = render(page());
+  expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['会话时序图', '会话数据流', '会话分析助手']);
   await screen.findByRole('button', { name: '数据包 41，TCP，66 字节' });
   for (let visit = 0; visit < 2; visit += 1) {
     fireEvent.click(screen.getByRole('tab', { name: '会话数据流' }));

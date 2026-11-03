@@ -34,6 +34,9 @@ pathlib.Path(os.environ['WIRESHARK_CONFIG_DIR']).mkdir()
 subprocess.run([arguments.compiler, '-std=c++17', '-I' + str(repository / 'include'),
                 '-I' + str(repository / 'third_library'), str(sources / 'convert.cpp'),
                 '-o', str(root / 'convert.exe')], check=True)
+subprocess.run([arguments.compiler, '-std=c++17', '-I' + str(repository / 'include'),
+                str(sources / 'line_reader.cpp'), '-o', str(root / 'line_reader.exe')], check=True)
+subprocess.run([str(root / 'line_reader.exe')], check=True)
 if arguments.sessions:
     subprocess.run([arguments.compiler, '-x', 'c', '-c', str(repository / 'third_library/sqlite3/sqlite3.c'),
                     '-o', str(root / 'sqlite.o')], check=True)
@@ -140,6 +143,20 @@ assert subprocess.run([str(root / 'convert.exe')], input=b'<pdml><packet></pdml>
 assert subprocess.run([str(root / 'convert.exe')], input=b'', capture_output=True).returncode != 0
 print('PASS malformed and empty XML rejected')
 verify_session(capture, 'HTTP')
+
+long_capture = root / 'long-info.pcap'
+long_request = b'GET /' + b'a' * 16000 + b' HTTP/1.1\r\nHost: example.test\r\n\r\n'
+long_packets = [tcp(long_request, 1, 24), tcp(b'GET /next HTTP/1.1\r\nHost: example.test\r\n\r\n', 1 + len(long_request), 24)]
+with long_capture.open('wb') as stream:
+    stream.write(struct.pack('<IHHIIII', 0xa1b2c3d4, 2, 4, 0, 0, 65535, 1))
+    for index, packet in enumerate(long_packets):
+        stream.write(struct.pack('<IIII', 1700000100 + index, 0, len(packet), len(packet)))
+        stream.write(packet)
+long_rows = subprocess.check_output([arguments.tshark, '-r', str(long_capture), '-T', 'fields',
+                                    '-e', 'frame.number', '-e', 'frame.time_epoch', '-e', '_ws.col.Info',
+                                    '-e', 'frame.protocols']).splitlines()
+assert max(map(len, long_rows)) > 4096
+verify_session(long_capture, 'HTTP-LONG')
 
 def dissection_options(path=''):
     output = subprocess.check_output([str(root / 'convert.exe'), '--options'], input=str(path).encode('utf-8'))

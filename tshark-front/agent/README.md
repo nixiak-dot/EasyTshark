@@ -1,0 +1,47 @@
+# 小型会话分析助手
+
+会话详情页在“会话数据流”右侧提供“会话分析助手”入口，点击后从右侧打开抽屉，不切换当前页或挤压原有布局。关闭后再次打开会保留当前对话、配置和未发送的问题。
+
+## 浏览器调试（无需打包）
+
+开发版与桌面版共用回答处理：提示词要求纯文本，返回时额外将常见 Markdown 标题、强调、列表、表格和链接转换为可读文本，再保存对话历史。不增加 Markdown 渲染器；代码围栏移除但保留其中原始内容，避免改写协议字段或示例。
+
+启动本地 C++ 抓包服务（127.0.0.1:8080），在 `tshark-front` 执行 `npm start`，通过 `http://localhost:3000` 打开详情页。增加 `src/setupProxy.js` 后需要重启已运行的前端开发服务。
+
+开发服务 `/__session-agent` 复用桌面版 Agent，模型请求由本机 Node 发出，不依赖模型服务的浏览器 CORS。仅允许本机同源访问，按页面随机标识隔离配置、对话与取消；最多 32 个开发上下文，闲置一小时清理，重启开发服务全部清除。不要通过反向代理公开此开发服务。单独部署静态前端不包含此中间件。
+
+桌面版仍使用受信任主 frame 的固定 IPC 接口，每个窗口独立配置、对话，关闭窗口取消请求。修改主进程后需要重启 Electron。
+
+## 交互与隐私
+
+配置支持 Chat Completions 工具调用的 Base URL（通常带 `/v1`）、模型 ID、API Key，然后直接输入问题。网络过程、故障排查、可疑流量是能力，不是固定任务按钮或输出模板。系统提示要求先理解问题，按需取证，只回答相关内容。
+
+回答按关键阶段归纳网络过程，重点描述会话中最高层协议实际完成的工作；底层协议默认合并，但凡底层行为直接决定上层成败、解释故障或构成异常，就保留相关证据。合并握手、普通 ACK 等包，不逐包复述 info；故障与异常先给判断，再引用关键帧的字段、时序和影响。证据充分时直接下结论，缺少证据时只指出影响判断的具体缺口，不附加泛泛提醒或无关排障清单。
+
+已移除常驻复选框。第一次发送时弹出确认，显示目标地址和模型；取消不会发送，同意后本次会话无需重复确认，更改配置需重新确认。取消不是禁用助手，仍可配置、编辑问题和检查页面。需要远程模型回答就必须发送问题，需要抓包证据时也要发送精简网络信息；可配置本机兼容模型服务。
+
+点击“应用模型配置”后，模型地址、名称和 API Key 保存到本机 JSON 配置文件，下次打开自动读取。浏览器开发版使用 Windows `%APPDATA%/EasyTshark/session-agent.json`，其他系统使用 `~/.config/EasyTshark/session-agent.json`；Electron 使用 `app.getPath('userData')/session-agent.json`。两种运行方式各自使用其配置位置。API Key 明文保存，请勿分享配置文件；不返回页面、不写 localStorage。远程地址必须 HTTPS，本机服务允许 HTTP，禁止 URL 凭据与 HTTP 重定向。UI 留空 Key 保留已保存密钥，内部设置接口空字符串可清空。对话和发送确认不持久化。
+
+请求失败会区分模型服务与本地抓包服务，显示 DNS、连接拒绝、超时、证书、连接中断等原因，以及实际请求地址。HTTP 错误显示状态码和对应检查项；不会展示服务端原始错误正文、密钥或请求载荷。Base URL 后自动追加 `/chat/completions`，路径前缀以服务商文档为准。模型请求由 Node/Electron 发起，请检查该进程的网络和代理配置，而不只是浏览器能否访问。
+
+## 按需工具与预算
+
+首个模型请求仅包含系统提示、会话 ID、最近对话和用户问题，不自动附带摘要、不提前读取抓包。一般概念解释可以不调用工具。
+
+- `session_summary({})`：统计、协议分布、最多 36 条首尾/关键/异常候选帧，每条 info 最多 240 字符。
+- `session_packets({start, keyword?})`：当前会话快照最多 20 个精简记录，start 为过滤后的零基下标。
+- `packet_fields({frame})`：仅允许当前会话快照帧，最多 60 个白名单字段；不发送完整 hex、Cookie、Authorization 或完整数据流。
+
+首次调用工具时本地分页读取最多 3000 包并校验归属，之后使用快照，超出标记部分覆盖。每次最多 3 次工具调用、4 次模型请求，每次输出预算 1800 tokens；保留最近 3 轮对话，每轮历史回答最多 3500 字符。界面展示提供商累计 token 用量，不保证不同模型的确切 token 数。
+
+“新对话 / 刷新证据”清空对话，下次发送重建快照；“停止”取消请求，总时限 120 秒。没有任意 URL、SQL、shell、写操作或自动修复。模型内容纯文本显示，抓包字段是不可执行的不可信证据。
+
+单会话不等于全网攻击检测；加密、缺包、采样会限制结论，精简 info 也可能含敏感 URL、域名、业务信息。分析时不要切换抓包文件：项目没有跨文件数据集 ID，不能可靠区分不同文件中重复的会话/帧编号。
+
+## 内部接口和验证
+
+preload 提供 `agentSettings(settings?)`、`agentChat({sessionId,text,reset?,provider:{baseUrl,model}})`、`agentCancel()`。开发 HTTP 分别为 `POST /__session-agent/settings`（body `{settings?}`）、`/chat`、`/cancel`，必须带随机 UUID `X-Session-Agent`。设置返回 `{baseUrl,model,hasKey}`；对话返回 `{ok:true,answer,actions,usageTokens,coverage}` 或 `{ok:false,error}`。问题最多 2000 字符，没有取证时 coverage 为 null。
+
+`node --test agent/agent.test.cjs agent/request.test.cjs agent/settings.test.cjs` 验证按需取证、会话隔离、预算、取消、真实 HTTP fixture、错误诊断与脱敏、配置持久化、IPC 和开发端同源限制。`npm test -- --watchAll=false --runInBand` 验证页面及布局回归。未使用真实模型密钥，不代表验证所有提供商兼容性。
+
+工具调用格式参考：https://developers.openai.com/api/docs/guides/function-calling

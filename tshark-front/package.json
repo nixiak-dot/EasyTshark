@@ -72,6 +72,13 @@
     "files": [
       "build/**/*",
       "electron.js",
+      "agent/evidence.cjs",
+      "agent/runtime.cjs",
+      "agent/plain-text.cjs",
+      "agent/request.cjs",
+      "agent/settings.cjs",
+      "agent/ipc.cjs",
+      "agent/client.cjs",
       "preload.js"
     ],
     "extraResources": [

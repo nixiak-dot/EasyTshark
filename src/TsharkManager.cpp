@@ -1,6 +1,7 @@
 ﻿#include "TsharkManager.h"
 #include <filesystem>
 #include "TsharkDissection.h"
+#include "TsharkLineReader.h"
 #include <utility>
 
 
@@ -145,47 +146,46 @@ bool TsharkManager::capturePacketEntry(std::string adapterName) {
 
 	//FILE* pipe = _popen(command.c_str(),"r");
 	command += tsharkDissectionOptions(config.paths.tlsKeyLogPath);
-	FILE* pipe = ProcessUtil::popenEx(command.c_str(), &captureTsharkPid);
+	FILE* pipe = ProcessUtil::popenEx(command.c_str(), &captureTsharkPid, false);
 	if (!pipe) {
 		std::cerr << "fail to open file";
 		return false;
 	}
 
-	char buffer[4096];
+	std::string line;
+	bool success = true;
 	uint32_t file_offset = sizeof(PcapHeader);
 	int countPackets = 0;
-	while (fgets(buffer, sizeof(buffer), pipe) != nullptr && !captureStopFlag) {
+	try {
+		while (!captureStopFlag && readTsharkLine(pipe, line)) {
 
-		// 在线采集的时候过滤额外的信息
-		std::string line = buffer;
-		if (line.find("Capturing on") != std::string::npos) {
-			continue;
+			std::shared_ptr<Packet> packet = std::make_shared<Packet>();
+
+			if (!parseLine(line, packet) || packet->frame_number != countPackets + 1) {
+				throw std::runtime_error("Invalid or out-of-order TShark packet record");
+			}
+
+			file_offset += sizeof(PacketHeader);
+			packet->file_offset = file_offset;
+			file_offset += packet->cap_len;
+
+			captureProcessPacket(packet);
+
+			countPackets += 1;
 		}
-
-		std::shared_ptr<Packet> packet = std::make_shared<Packet>();
-
-		if (!parseLine(buffer, packet)) {
-			Logger::LOG_ERROR("parse failed, tshark input:{}", buffer);
-
-			assert(false);
-		}
-
-		//计算数据包偏移量
-		file_offset += sizeof(PacketHeader);
-		packet->file_offset = file_offset;
-		file_offset += packet->cap_len;
-
-		//保存数据包
-		captureProcessPacket(packet);
-
-		countPackets += 1;
+	} catch (const std::exception& error) {
+		Logger::LOG_ERROR("在线抓包解析停止，已处理{}包，当前行{}字节: {}", countPackets, line.size(), error.what());
+		ProcessUtil::kill(captureTsharkPid);
+		success = false;
 	}
+	captureStopFlag = true;
 
 	Logger::LOG_INFO("动态数据分析完成,数据包数量为{}", countPackets);
 
-	_pclose(pipe);
+	std::fclose(pipe);
+	captureTsharkPid = 0;
 
-	return true;
+	return success;
 }
 
 //解析tshark输出(线程)
@@ -627,7 +627,7 @@ bool TsharkManager::analysisFile(std::string pcapFilePath) {
 	}
 
 	command += tsharkDissectionOptions(config.paths.tlsKeyLogPath);
-	FILE* pipe = ProcessUtil::popenEx(command.c_str(), &analyseTsharkPid);
+	FILE* pipe = ProcessUtil::popenEx(command.c_str(), &analyseTsharkPid, false);
 	if (!pipe) {
 		std::cerr << "fail to open file";
 		this->workStatus = STATUS_IDLE;
@@ -638,39 +638,37 @@ bool TsharkManager::analysisFile(std::string pcapFilePath) {
 	analyseStopFlag = false;
 	analyseStorageThread = std::make_shared<std::thread>(&TsharkManager::analyseStorageThreadEntry, this);
 
-	char buffer[4096];
+	std::string line;
+	bool success = true;
 	uint32_t file_offset = sizeof(PcapHeader);
 	int countPackets = 0;
-	while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+	try {
+		while (readTsharkLine(pipe, line)) {
 
-		// 采集的时候过滤额外的信息
-		std::string line = buffer;
-		if (line.find("Capturing on") != std::string::npos) {
-			continue;
+			std::shared_ptr<Packet> packet = std::make_shared<Packet>();
+
+			if (!parseLine(line, packet) || packet->frame_number != countPackets + 1) {
+				throw std::runtime_error("Invalid or out-of-order TShark packet record");
+			}
+
+			file_offset += sizeof(PacketHeader);
+			packet->file_offset = file_offset;
+			file_offset += packet->cap_len;
+
+			analyseProcessPacket(packet);
+
+			countPackets += 1;
 		}
-
-		std::shared_ptr<Packet> packet = std::make_shared<Packet>();
-
-		if (!parseLine(buffer, packet)) {
-			Logger::LOG_ERROR("解包失败,无效tshark输入:{}", buffer);
-
-			assert(false);
-		}
-
-		//计算数据包偏移量
-		file_offset += sizeof(PacketHeader);
-		packet->file_offset = file_offset;
-		file_offset += packet->cap_len;
-
-		//保存数据包
-		analyseProcessPacket(packet);
-
-		countPackets += 1;
+	} catch (const std::exception& error) {
+		Logger::LOG_ERROR("离线分析解析停止，已处理{}包，当前行{}字节: {}", countPackets, line.size(), error.what());
+		ProcessUtil::kill(analyseTsharkPid);
+		success = false;
 	}
 
 	Logger::LOG_INFO("静态数据分析完成,数据包数量为{}", countPackets);
 
-	_pclose(pipe);
+	std::fclose(pipe);
+	analyseTsharkPid = 0;
 
 
 	// 等待存储线程退出
@@ -681,7 +679,7 @@ bool TsharkManager::analysisFile(std::string pcapFilePath) {
 	//工作状态恢复
 	workStatus = STATUS_IDLE;
 
-	return true;
+	return success;
 }
 
 bool TsharkManager::analysePacketEntry(std::string pcapFilePath) {

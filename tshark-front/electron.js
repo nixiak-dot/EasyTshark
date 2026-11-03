@@ -2,6 +2,15 @@ const {app,BrowserWindow,dialog,ipcMain,Menu} = require('electron');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
+const registerAgent = require('./agent/ipc.cjs');
+const { createSettingsStore } = require('./agent/settings.cjs');
+
+registerAgent(ipcMain, (sender) => {
+    const url = new URL(sender.getURL());
+    return process.argv[2] === 'dev' ? url.origin === 'http://localhost:3000'
+        : url.protocol === 'file:' && url.pathname === new URL(pathToFileURL(path.join(__dirname, 'build/index.html')).href).pathname;
+}, createSettingsStore(path.join(app.getPath('userData'), 'session-agent.json')));
 
 const windows = {
   windowIndex: 0,
@@ -120,7 +129,12 @@ app.on('web-contents-created',function(event,webContents){
         const browserWindow = new BrowserWindow({
           width: 1000,
           height: 800,
-          title: 'EasyTshark'
+          title: 'EasyTshark',
+          webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            contextIsolation: true,
+            nodeIntegration: false
+          }
         });
 
         if (windows.windowIndex === 0) {
