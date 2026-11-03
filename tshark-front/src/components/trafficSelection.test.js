@@ -12,6 +12,7 @@ jest.mock('./useContentColumnWidths', () => ({
 }));
 jest.mock('react-resizable', () => ({ Resizable: ({ children }) => children }));
 jest.mock('@arco-design/web-react', () => ({
+  Spin: jest.requireActual('@arco-design/web-react').Spin,
   Table: ({ data, rowKey, rowClassName, onRow, loading }) => (
     <div className='arco-table-body' data-testid='traffic-table' data-loading={String(Boolean(loading))}>{data.map((record) => (
       <button

@@ -1,0 +1,16 @@
+export const MIN_BYTES_PER_ROW = 8;
+export const HEX_BYTE_WIDTH = 20;
+export const HEX_BYTE_GAP = 2;
+export const ASCII_BYTE_WIDTH = 10;
+export const ASCII_BYTE_GAP = 1;
+export const BYTE_OFFSET_WIDTH = 44;
+export const BYTE_GROUP_GAP = 12;
+export const BYTE_VIEW_PADDING = 8;
+export const BYTE_ROW_OVERHEAD = BYTE_OFFSET_WIDTH + BYTE_GROUP_GAP * 2 + BYTE_VIEW_PADDING * 2 - HEX_BYTE_GAP - ASCII_BYTE_GAP;
+export const BYTE_COLUMN_WIDTH = HEX_BYTE_WIDTH + HEX_BYTE_GAP + ASCII_BYTE_WIDTH + ASCII_BYTE_GAP;
+export const MIN_PACKET_BYTES_WIDTH = BYTE_ROW_OVERHEAD + MIN_BYTES_PER_ROW * BYTE_COLUMN_WIDTH;
+export const MIN_PACKET_DETAIL_WIDTH = (MIN_PACKET_BYTES_WIDTH + 20) * 2 + 26;
+
+export function bytesPerRowForWidth(width) {
+  return Math.max(MIN_BYTES_PER_ROW, Math.floor((width - BYTE_ROW_OVERHEAD) / BYTE_COLUMN_WIDTH));
+}

@@ -1,12 +1,13 @@
 import { useState, forwardRef ,useEffect,useImperativeHandle,useRef,useCallback} from 'react';
-import { Table,Pagination,Tree } from '@arco-design/web-react';
+import { Table,Pagination,Tree,Spin } from '@arco-design/web-react';
 import { Resizable } from 'react-resizable';
 import useContentColumnWidths from './useContentColumnWidths';
 import TrafficFilterBar from './TrafficFilterBar';
 import { buildProtocolTree, packetByteRange } from './packetProtocolTree';
+import PacketBytes, { parsePacketBytes } from './PacketBytes';
+import { MIN_PACKET_DETAIL_WIDTH } from './packetByteLayout';
 import dayjs from 'dayjs';
 import { apiPost,apiGet } from '../Api.ts';
-import { hexCharCodeToStr, strTwoSplit, isInteger, padNumber } from '../util.ts'
 const originColumns = [
   {
     title: '序号',
@@ -129,15 +130,14 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
 
   const [treeData,setTreeData] = useState([]);
   const [detailError, setDetailError] = useState('');
+  const [detailLoading, setDetailLoading] = useState(false);
+  const detailPanelRef = useRef(null);
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [currentRowId,setCurrentRowId] = useState(null);
   const [scrollTarget, setScrollTarget] = useState(null);
 
  // 十六进制数据相关
-  const [offsetData, setOffsetData] = useState([])
-  const [hexData, setHexData] = useState([])
-  const [ascData, setAscData] = useState([])
-  const [selectedLeftHex, setSelectedLeftHex] = useState([])
+  const [packetBytes, setPacketBytes] = useState([])
   const [selectedRightHex, setSelectedRightHex] = useState([])
 
   const INTERVAL = 3000;
@@ -212,9 +212,7 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
     setScrollTarget(null)
     setDataList([])
     setTreeData([])
-    setOffsetData([])
-    setHexData([])
-    setAscData([])
+    setPacketBytes([])
     setCurrentPage(1)
     setCurrentRowId(null)
     setReloadCount(reloadCount + 1)
@@ -325,22 +323,29 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
 
   useEffect(()=>{
     let active = true;
+    detailPanelRef.current?.querySelectorAll('.proto-tree, .hex-data').forEach((pane) => {
+      pane.scrollTop = 0;
+      pane.scrollLeft = 0;
+    });
     setTreeData([]);
     setDetailError('');
     setSelectedKeys([]);
-    setSelectedLeftHex([]);
     setSelectedRightHex([]);
-    transformHexData('');
+    setPacketBytes([]);
+    setDetailLoading(currentRowId > 0);
     if (currentRowId > 0) {
       apiPost('/api/getPacketDetail', { frameNumber: currentRowId }).then((response) => {
         if (!active) return;
         if (!Array.isArray(response?.data?.proto)) {
           throw new Error('数据包协议详情解析失败');
         }
+        const bytes = parsePacketBytes(response.data.hexdata || '');
         setTreeData(buildProtocolTree(response.data.proto));
-        transformHexData(response.data.hexdata || '');
+        setPacketBytes(bytes);
       }).catch(() => {
         if (active) setDetailError('无法解析数据包详情，请确认抓包文件可读后重试。');
+      }).finally(() => {
+        if (active) setDetailLoading(false);
       });
     }
     return () => { active = false; };
@@ -354,59 +359,18 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
     return title;
   }
 
-  const transformHexData = (hex) => {
-    const offsetData = [];
-    const hexData = [];
-    const ascData = [];
-
-    // 十六进制转换为ascii码
-    const params = hexCharCodeToStr(hex);
-    for (let i = 0; i < params.length; i++) {
-      const asc = { label: params[i], key: i, show: false };
-      // 如果是..，则表达找不到该ascii码，用虚拟.表达
-      const str = ['换', '行', '无'];
-      if (str.includes(params[i])) {
-        asc.label = '.';
-        asc.show = true;
-      }
-      ascData.push(asc);
-    }
-  
-    const arr = strTwoSplit(hex).split(',').filter(Boolean);
-    arr.map((item, index) => {
-      hexData.push({ label: item, key: index });
-    });
-
-    // 判断是总偏移量个数是否为整数，不为整数向上取整
-    let offset = ascData.length / 16;
-    if (!isInteger(offset)) {
-      offset = parseInt(offset) + 1;
-    }
-
-    // 计算偏移量 不够四位左侧补位0
-    for (let i = 0; i < offset; i++) {
-      const hex = padNumber((i * 16).toString(16), 4, 0);
-      offsetData.push({ label: hex, key: i + 1 });
-    }
-
-    setOffsetData(offsetData);
-    setHexData(hexData);
-    setAscData(ascData);
-}
-
 // 点击节点高亮偏移量
   const handleNodeClick = (node, data) => {
     setSelectedKeys(node)
     const selectedNode = data.node?.props?.dataRef || data.node?.props;
-    const bytes = packetByteRange(selectedNode, ascData.length);
+    const bytes = packetByteRange(selectedNode, packetBytes.length);
     setSelectedRightHex(bytes);
-    setSelectedLeftHex([...new Set(bytes.map((index) => Math.floor(index / 16) + 1))]);
   }
 
 
 
   return (
-    <div>
+    <div className='data-packet-page' style={{ '--packet-detail-min-width': `${MIN_PACKET_DETAIL_WIDTH}px` }}>
       {listError && <div role='alert'>{listError}</div>}
       {props.match.params.type !== 'detail' && (
         <TrafficFilterBar value={searchInput} appliedValue={searchKeyword}
@@ -456,8 +420,10 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
         />
       </div>
       </Resizable>
-      <div className='detail-pannel'>
-        <div className='proto-tree'>
+      <div className='detail-pannel' ref={detailPanelRef}>
+        <div className='proto-tree' aria-label='协议树' aria-busy={detailLoading}>
+          <Spin loading={detailLoading} className='packet-detail-spin' tip='正在加载协议树…'>
+          <div className='packet-detail-content'>
           {detailError && <div role='alert'>{detailError}</div>}
           <Tree
            selectedKeys={selectedKeys}
@@ -473,25 +439,16 @@ const DataPacketPage = forwardRef(function DataPacketPage(props,ref) {
            renderTitle={renderTitle}
            onSelect={handleNodeClick}
            />
+          </div>
+          </Spin>
        </div>
-       <div className='hex-data'>
-        <div className="offset">
-          <div className="left pdt8 pdb8">
-            {offsetData.map(item => {
-              return <span key={item.key} className={selectedLeftHex.indexOf(item.key) !== -1 ? 'selected' : ''}>{item.label}</span>
-            })}
+       <div className='hex-data' aria-label='十六进制与 ASCII' aria-busy={detailLoading}>
+        <Spin loading={detailLoading} className='packet-detail-spin' tip='正在加载字节数据…'>
+          <div className='packet-detail-content'>
+            <PacketBytes key={currentRowId} bytes={packetBytes} selectedBytes={selectedRightHex}
+              onSelect={(bytes) => { setSelectedKeys([]); setSelectedRightHex(bytes); }} />
           </div>
-          <div className="center">
-            {hexData.map(item => {
-              return <span id={item.key} key={item.key} className={selectedRightHex.indexOf(item.key) !== -1 ? 'selected' : ''}>{item.label}</span>
-            })}
-          </div>
-          <div className="right">
-            {ascData.map(item => {
-              return <span key={item.key} className={selectedRightHex.indexOf(item.key) !== -1 ? 'selected' : ''} style={item.show ? { color: '#bbb' } : {}}>{item.label}</span>
-            })}
-          </div>
-        </div>
+        </Spin>
        </div>
     </div>
     </div>

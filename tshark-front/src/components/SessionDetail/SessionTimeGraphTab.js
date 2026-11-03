@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Alert, Card, Empty, ResizeBox, Spin, Tag, Typography } from '@arco-design/web-react';
 import { IconArrowRight } from '@arco-design/web-react/icon';
 import { calculateDuration } from '../../util.ts';
 import { apiPost } from '../../Api.ts';
 import DataPacketPage from '../DataPacketPage';
+import { MIN_PACKET_DETAIL_WIDTH } from '../packetByteLayout';
 import TrafficFilterBar from '../TrafficFilterBar';
 import '../../style/global.css';
 import '../../style/session-time-graph.css';
@@ -20,10 +21,10 @@ function Endpoint({ label, ip, port, location }) {
   return (
     <div className='session-endpoint'>
       <span className='session-eyebrow'>{label}</span>
-      <Typography.Ellipsis showTooltip className='session-endpoint-address'>
+      <span className='session-endpoint-address'>
         {ip || '未知地址'}{port != null ? `:${port}` : ''}
-      </Typography.Ellipsis>
-      <Typography.Ellipsis showTooltip className='session-muted'>{location || '未知归属地'}</Typography.Ellipsis>
+      </span>
+      <span className='session-muted'>{location || '未知归属地'}</span>
     </div>
   );
 }
@@ -37,10 +38,44 @@ export default function SessionTimeGraphTab({ sessionId }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [splitSize, setSplitSize] = useState(0.5);
+  const [layoutWidth, setLayoutWidth] = useState(0);
+  const [timelineMinWidth, setTimelineMinWidth] = useState(480);
+  const layoutRef = useRef(null);
+  const summaryRef = useRef(null);
   const packetPageRef = useRef(null);
   const record = readSession(sessionId);
   const transport = record.trans_proto || '';
   const application = record.app_proto || '';
+  const stacked = layoutWidth > 0 && layoutWidth < timelineMinWidth + MIN_PACKET_DETAIL_WIDTH + 20;
+  const minSplitSize = layoutWidth && !stacked ? (timelineMinWidth + 10) / layoutWidth : 0.25;
+  const maxSplitSize = layoutWidth && !stacked ? 1 - (MIN_PACKET_DETAIL_WIDTH + 10) / layoutWidth : 0.75;
+  const clampSplitSize = (size) => Math.min(maxSplitSize, Math.max(minSplitSize, size));
+  const effectiveSplitSize = clampSplitSize(splitSize);
+
+  useLayoutEffect(() => {
+    const layout = layoutRef.current;
+    const summary = summaryRef.current;
+    const measure = () => {
+      setLayoutWidth(layout.offsetWidth);
+      const sizingSummary = summary.cloneNode(true);
+      sizingSummary.setAttribute('aria-hidden', 'true');
+      Object.assign(sizingSummary.style, { position: 'fixed', visibility: 'hidden', pointerEvents: 'none', width: 'max-content', maxWidth: 'none' });
+      layout.parentElement.appendChild(sizingSummary);
+      const summaryWidth = sizingSummary.getBoundingClientRect().width;
+      sizingSummary.remove();
+      const list = summary.closest('.session-timeline-list');
+      const scrollbarWidth = Math.max(0, list.offsetWidth - list.clientWidth);
+      setTimelineMinWidth(Math.ceil(Math.max(480, summaryWidth + 26 + scrollbarWidth)));
+    };
+    measure();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    [layout, summary.closest('.session-timeline-list'), ...summary.querySelectorAll('.session-endpoint > span, .session-summary-heading > *')].forEach((element) => observer?.observe(element));
+    window.addEventListener('resize', measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [sessionId, transport, application, record.ip1, record.ip1_port, record.ip1_location, record.ip2, record.ip2_port, record.ip2_location]);
 
   useEffect(() => {
     let active = true;
@@ -80,19 +115,21 @@ export default function SessionTimeGraphTab({ sessionId }) {
       <TrafficFilterBar value={searchInput} appliedValue={filterExpression}
         onChange={setSearchInput} onSubmit={() => setFilterExpression(searchInput.trim())}
         onClear={() => { setSearchInput(''); setFilterExpression(''); }} />
-      <ResizeBox.Split className='session-detail-layout' size={splitSize} min={0.25} max={0.75}
-        onMoving={(_, size) => setSplitSize(Number(size))}
+      <ResizeBox.Split ref={layoutRef} className={`session-detail-layout${stacked ? ' is-stacked' : ''}`}
+        style={{ '--packet-detail-min-width': `${MIN_PACKET_DETAIL_WIDTH}px` }}
+        size={effectiveSplitSize} min={minSplitSize} max={maxSplitSize}
+        onMoving={(_, size) => setSplitSize(clampSplitSize(Number(size)))}
         trigger={(
           <div className='session-split-handle' role='separator' tabIndex={0}
             aria-label='调整会话时序与数据包列表宽度' aria-orientation='vertical'
-            aria-valuemin={25} aria-valuemax={75} aria-valuenow={Math.round(splitSize * 100)}
+            aria-valuemin={Math.round(minSplitSize * 100)} aria-valuemax={Math.round(maxSplitSize * 100)} aria-valuenow={Math.round(effectiveSplitSize * 100)}
             title='左右拖动调整宽度，双击恢复均分'
-            onDoubleClick={() => setSplitSize(0.5)}
+            onDoubleClick={() => setSplitSize(clampSplitSize(0.5))}
             onKeyDown={(event) => {
               if (!['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) return;
               event.preventDefault();
-              setSplitSize((previous) => event.key === 'Home' ? 0.5 :
-                Math.min(0.75, Math.max(0.25, previous + (event.key === 'ArrowRight' ? 0.02 : -0.02))));
+              setSplitSize(clampSplitSize(event.key === 'Home' ? 0.5 :
+                effectiveSplitSize + (event.key === 'ArrowRight' ? 0.02 : -0.02)));
             }}>
             <span aria-hidden='true' />
           </div>
@@ -108,7 +145,7 @@ export default function SessionTimeGraphTab({ sessionId }) {
           <Spin loading={loading} className='session-timeline-spin'>
             <div className='session-timeline-list' aria-label='会话时序'>
               <div className='session-timeline-packets'>
-          <Card className='session-summary' bordered={false}>
+          <Card className='session-summary' bordered={false} ref={summaryRef}>
             <div className='session-summary-heading'>
               <span className='session-eyebrow'>SESSION / {sessionId}</span>
               <div className='session-protocol-tags'>
@@ -159,7 +196,7 @@ export default function SessionTimeGraphTab({ sessionId }) {
                         <Tag color={transportOnly ? 'arcoblue' : protocol === '未知协议' ? 'gray' : 'purple'} size='small'>{protocol}</Tag>
                         <span className='session-muted'>{transportOnly ? '网络 / 传输层' : protocol === '未知协议' ? '协议未识别' : '应用层协议'}</span>
                       </div>
-                      <Typography.Text className='session-packet-info'>{item.info || '暂无数据包信息'}</Typography.Text>
+                      <Typography.Text className='session-packet-info' title={item.info || '暂无数据包信息'}>{item.info || '暂无数据包信息'}</Typography.Text>
                     </div>
                   </Card>
                 );

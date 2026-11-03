@@ -1,0 +1,16 @@
+.packet-bytes { width: 100%; padding: 10px var(--byte-view-padding); box-sizing: border-box; font: 13px/26px Consolas, 'Cascadia Code', 'Courier New', monospace; font-variant-numeric: tabular-nums; }
+.packet-bytes-heading, .packet-bytes-row { display: grid; grid-template-columns: var(--byte-offset-width) calc(var(--byte-columns) * (var(--hex-byte-width) + var(--hex-byte-gap)) - var(--hex-byte-gap)) calc(var(--byte-columns) * (var(--ascii-byte-width) + var(--ascii-byte-gap)) - var(--ascii-byte-gap)); column-gap: var(--byte-group-gap); align-items: center; }
+.packet-bytes-heading { margin-bottom: 6px; color: var(--color-text-3); font-size: 12px; }
+.packet-byte-offset { color: var(--color-text-3); border-radius: 4px; text-align: center; }
+.packet-byte-group { display: grid; grid-template-columns: repeat(var(--byte-columns), var(--hex-byte-width)); gap: var(--hex-byte-gap); }
+.packet-byte-ascii { grid-template-columns: repeat(var(--byte-columns), var(--ascii-byte-width)); gap: var(--ascii-byte-gap); }
+.packet-byte { appearance: none; box-sizing: border-box; width: 100%; height: 26px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--color-text-1); font: inherit; font-weight: 500; line-height: 24px; text-align: center; white-space: pre; cursor: pointer; }
+.packet-byte-hex .packet-byte { background: var(--color-fill-1); }
+.packet-byte.is-nonprintable { color: var(--color-text-4); }
+.packet-byte:hover { border-color: rgb(var(--primary-4)); background: var(--color-primary-light-1); }
+.packet-byte-offset.is-selected, .packet-byte.is-selected { background: var(--color-primary-light-2); color: rgb(var(--primary-6)); }
+.packet-byte.is-selected { border-color: rgb(var(--primary-3)); }
+.packet-byte:focus-visible { outline: 2px solid rgb(var(--primary-6)); outline-offset: 1px; }
+.packet-detail-spin { display: block; width: 100%; min-height: 140px; }
+.packet-detail-content { min-height: 140px; }
+.data-packet-page { min-width: calc(var(--packet-detail-min-width) - 2px); }

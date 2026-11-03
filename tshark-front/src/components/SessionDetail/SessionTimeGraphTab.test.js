@@ -61,7 +61,7 @@ test('compact Arco cards preserve packet fields, actual protocols and directiona
   expect(mockSelectPacket).toHaveBeenLastCalledWith(41, 0);
 });
 
-test('compact timeline retains full long info text in a shared intrinsic-width row container', async () => {
+test('fluid timeline retains full long info text for hover without widening the row container', async () => {
   const longInfo = 'Application Data ' + 'encrypted-payload '.repeat(40);
   apiPost.mockResolvedValue({ code: '200', data: [packets[0], { ...packets[1], info: longInfo }], total: 2 });
   const { container } = render(<SessionTimeGraphTab sessionId='7' />);
@@ -71,6 +71,8 @@ test('compact timeline retains full long info text in a shared intrinsic-width r
   expect(rows.firstElementChild).toHaveClass('session-summary');
   expect(https.parentElement).toBe(rows);
   expect(https.querySelector('.session-packet-info').textContent).toBe(longInfo);
+  expect(https.querySelector('.session-packet-info')).toHaveAttribute('title', longInfo);
+  expect(https.querySelector('.arco-card-header')).not.toBeInTheDocument();
   expect(https.querySelector('.arco-ellipsis')).not.toBeInTheDocument();
   expect(container.querySelector('.session-time-offset')).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: '会话概览' })).not.toBeInTheDocument();
@@ -144,7 +146,8 @@ test('the Arco split resizes both panes, clamps the ratio and resets without que
   const { container } = render(<SessionTimeGraphTab sessionId='7' />);
   await screen.findByRole('button', { name: '数据包 41，TCP，66 字节' });
   const layout = container.querySelector('.session-detail-layout');
-  Object.defineProperty(layout, 'offsetWidth', { configurable: true, value: 1000 });
+  Object.defineProperty(layout, 'offsetWidth', { configurable: true, value: 2000 });
+  fireEvent(window, new Event('resize'));
   const separator = screen.getByRole('separator', { name: '调整会话时序与数据包列表宽度' });
   const drag = (start, end) => {
     const down = createEvent.mouseDown(separator, { clientX: start });
@@ -157,20 +160,63 @@ test('the Arco split resizes both panes, clamps the ratio and resets without que
   };
   const requests = apiPost.mock.calls.length;
   expect(separator).toHaveAttribute('aria-valuenow', '50');
-  drag(500, 300);
-  expect(separator).toHaveAttribute('aria-valuenow', '30');
-  expect(layout.firstElementChild.style.flexBasis).toContain('30%');
+  drag(1000, 100);
+  expect(separator).toHaveAttribute('aria-valuenow', '25');
+  expect(layout.firstElementChild.style.flexBasis).toContain('24.5%');
   drag(300, 0);
   expect(separator).toHaveAttribute('aria-valuenow', '25');
   drag(0, 2000);
-  expect(separator).toHaveAttribute('aria-valuenow', '75');
+  expect(separator).toHaveAttribute('aria-valuenow', '62');
+  expect(separator).toHaveAttribute('aria-valuemax', '62');
+  expect((1 - parseFloat(layout.firstElementChild.style.flexBasis.replace('calc(', '')) / 100) * 2000 - 10).toBeGreaterThanOrEqual(756);
   fireEvent.doubleClick(separator);
   expect(separator).toHaveAttribute('aria-valuenow', '50');
   fireEvent.keyDown(separator, { key: 'ArrowLeft' });
   expect(separator).toHaveAttribute('aria-valuenow', '48');
   fireEvent.keyDown(separator, { key: 'Home' });
   expect(separator).toHaveAttribute('aria-valuenow', '50');
+  Object.defineProperty(layout, 'offsetWidth', { configurable: true, value: 1300 });
+  fireEvent(window, new Event('resize'));
+  expect(layout).not.toHaveClass('is-stacked');
+  expect(separator).toHaveAttribute('aria-valuemax', '41');
+  expect(separator).toHaveAttribute('aria-valuenow', '41');
+  fireEvent.keyDown(separator, { key: 'ArrowRight' });
+  fireEvent.doubleClick(separator);
+  expect(separator).toHaveAttribute('aria-valuenow', '41');
   expect(apiPost.mock.calls).toHaveLength(requests);
+});
+
+test('summary intrinsic width sets the reset minimum and narrow layouts stack safely', async () => {
+  const originalRect = HTMLElement.prototype.getBoundingClientRect;
+  const rectSpy = jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
+    return this.classList.contains('session-summary')
+      ? { width: 900, height: 120, top: 0, left: 0, right: 900, bottom: 120 }
+      : originalRect.call(this);
+  });
+  try {
+    const { container } = render(<SessionTimeGraphTab sessionId='7' />);
+    await waitFor(() => expect(container.querySelectorAll('.session-packet-card')).toHaveLength(2));
+    const layout = container.querySelector('.session-detail-layout');
+    Object.defineProperty(layout, 'offsetWidth', { configurable: true, value: 1800 });
+    fireEvent(window, new Event('resize'));
+    const separator = screen.getByRole('separator');
+    expect(separator).toHaveAttribute('aria-valuemin', '52');
+    expect(separator).toHaveAttribute('aria-valuenow', '52');
+    fireEvent.keyDown(separator, { key: 'ArrowLeft' });
+    fireEvent.doubleClick(separator);
+    expect(separator).toHaveAttribute('aria-valuenow', '52');
+    expect(container.querySelectorAll('.session-summary')).toHaveLength(1);
+    expect(container.querySelector('.session-summary .arco-ellipsis')).not.toBeInTheDocument();
+    Object.defineProperty(layout, 'offsetWidth', { configurable: true, value: 1500 });
+    fireEvent(window, new Event('resize'));
+    expect(layout).toHaveClass('is-stacked');
+    Object.defineProperty(layout, 'offsetWidth', { configurable: true, value: 2000 });
+    fireEvent(window, new Event('resize'));
+    expect(layout).not.toHaveClass('is-stacked');
+    expect(separator).toHaveAttribute('aria-valuemin', '47');
+  } finally {
+    rectSpy.mockRestore();
+  }
 });
 
 test('one shared filter submits existing syntax to both views and clears it', async () => {
