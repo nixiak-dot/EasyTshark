@@ -115,7 +115,8 @@ test('the shared filter precedes both columns and the summary is the first row i
   await screen.findByRole('button', { name: '数据包 41，TCP，66 字节' });
   const layout = container.querySelector('.session-detail-layout');
   const leftColumn = container.querySelector('.session-timeline-column');
-  expect(layout.previousElementSibling).toHaveClass('traffic-filter-bar');
+  expect(layout.parentElement).toHaveClass('session-detail-viewport');
+  expect(layout.parentElement.previousElementSibling).toHaveClass('traffic-filter-bar');
   expect(leftColumn.parentElement.parentElement).toBe(layout);
   expect(leftColumn.children).toHaveLength(1);
   expect(leftColumn.lastElementChild).toHaveClass('session-timeline-panel');
@@ -187,7 +188,7 @@ test('the Arco split resizes both panes, clamps the ratio and resets without que
   expect(apiPost.mock.calls).toHaveLength(requests);
 });
 
-test('summary intrinsic width sets the reset minimum and narrow layouts stack safely', async () => {
+test('summary intrinsic width sets the reset minimum and narrow layouts retain horizontal panes', async () => {
   const originalRect = HTMLElement.prototype.getBoundingClientRect;
   const rectSpy = jest.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
     return this.classList.contains('session-summary')
@@ -210,7 +211,18 @@ test('summary intrinsic width sets the reset minimum and narrow layouts stack sa
     expect(container.querySelector('.session-summary .arco-ellipsis')).not.toBeInTheDocument();
     Object.defineProperty(layout, 'offsetWidth', { configurable: true, value: 1500 });
     fireEvent(window, new Event('resize'));
-    expect(layout).toHaveClass('is-stacked');
+    expect(layout).not.toHaveClass('is-stacked');
+    expect(layout.style.minWidth).toBe('1702px');
+    expect(separator).toHaveAttribute('aria-valuemin', '55');
+    expect(separator).toHaveAttribute('aria-valuemax', '55');
+    expect(separator).toHaveAttribute('aria-valuenow', '55');
+    Object.defineProperty(layout, 'offsetWidth', { configurable: true, value: 800 });
+    fireEvent(window, new Event('resize'));
+    expect(layout).not.toHaveClass('is-stacked');
+    expect(layout.style.minWidth).toBe('1702px');
+    expect(separator).toHaveAttribute('aria-valuenow', '55');
+    fireEvent.keyDown(separator, { key: 'ArrowRight' });
+    expect(separator).toHaveAttribute('aria-valuenow', '55');
     Object.defineProperty(layout, 'offsetWidth', { configurable: true, value: 2000 });
     fireEvent(window, new Event('resize'));
     expect(layout).not.toHaveClass('is-stacked');

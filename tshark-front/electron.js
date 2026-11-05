@@ -1,5 +1,5 @@
 const {app,BrowserWindow,dialog,ipcMain,Menu} = require('electron');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
@@ -19,6 +19,30 @@ const windows = {
 }
 
 
+let serverProcess = null;
+let isQuitting = false;
+
+function stopTsharkServer() {
+    if (!serverProcess || serverProcess.exitCode !== null || serverProcess.signalCode !== null) return;
+    if (process.platform === 'win32') {
+        const result = spawnSync(path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'taskkill.exe'),
+            ['/PID', String(serverProcess.pid), '/T', '/F'], {
+                stdio: 'ignore',
+                windowsHide: true,
+                timeout: 5000
+            });
+        if (result.error || result.status !== 0) serverProcess.kill();
+    } else {
+        serverProcess.kill();
+    }
+}
+
+app.on('before-quit', () => {
+    if (isQuitting) return;
+    isQuitting = true;
+    stopTsharkServer();
+});
+
 function createWindow()
 {
     windows.mainWindow = new BrowserWindow({
@@ -32,6 +56,10 @@ function createWindow()
         }
     })
     Menu.setApplicationMenu(null);
+    windows.mainWindow.on('closed', () => {
+        windows.mainWindow = null;
+        if (!isQuitting) app.quit();
+    });
     
     const mode = process.argv[2];
     if(mode === 'dev'){
@@ -53,16 +81,20 @@ function startTsharkServer() {
         .map((name) => path.join(resourceDir, name))
         .find((filePath) => fs.existsSync(filePath));
     if (!serverPath) return;
-    const serverProcess = spawn(serverPath, [`--uipid=${process.pid}`], {
+    serverProcess = spawn(serverPath, [`--uipid=${process.pid}`], {
         env: {
             ...process.env,
             ...(app.isPackaged ? { EASYTSHARK_DATA_DIR: path.dirname(app.getPath('exe')) } : {})
         },
-        detached: true,
+        detached: false,
         stdio: 'ignore',
         windowsHide: true
     });
-    serverProcess.unref();
+    serverProcess.on('error', (error) => {
+        console.error('Failed to start EasyTshark backend:', error);
+        serverProcess = null;
+        app.quit();
+    });
 }
 
 ipcMain.handle('open-file-dialog', async () => {
@@ -161,7 +193,7 @@ app.on('web-contents-created',function(event,webContents){
 })
 
 app.on('window-all-closed',()=>{
-    if(process.platform !== 'darwin'){
+    if(!isQuitting && process.platform !== 'darwin'){
         app.quit();
     }
 })

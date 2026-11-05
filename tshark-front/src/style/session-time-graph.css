@@ -55,7 +55,8 @@
 .session-summary-direction::before { content: ''; flex: 1; height: 2px; background: currentColor; }
 .session-summary-direction .arco-icon { flex-shrink: 0; font-size: 22px; margin-left: -10px; }
 .session-summary-direction.is-backward { color: var(--session-backward-color); transform: rotate(180deg); }
-.session-detail-layout { width: 100%; align-items: stretch; }
+.session-detail-viewport { width: 100%; min-width: 0; overflow-x: auto; }
+.session-detail-layout { width: 100%; flex-direction: row; align-items: stretch; }
 .session-detail-layout > .arco-resizebox-split-pane { min-width: 0; overflow: visible; }
 .session-detail-layout > .second-pane { min-width: var(--packet-detail-min-width); }
 .session-detail-layout > .arco-resizebox-split-trigger { display: flex; align-self: stretch; flex: 0 0 20px; height: auto; background: transparent; }
@@ -113,15 +114,6 @@
 .session-time-view .session-packet-info { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0; color: inherit; font-size: 13px; line-height: 1.5715; white-space: nowrap; word-break: normal; overflow-wrap: normal; }
 .session-timeline-limit { padding: 8px; color: var(--color-text-3); font-size: 12px; text-align: center; }
 
-.session-detail-layout.is-stacked { flex-direction: column; }
-.session-detail-layout.is-stacked > .arco-resizebox-split-pane { flex: none !important; width: 100%; }
-.session-detail-layout.is-stacked > .arco-resizebox-split-trigger { display: none; }
-.session-detail-layout.is-stacked > .second-pane { margin-top: 14px; }
-.session-detail-layout.is-stacked .session-summary-endpoints { grid-template-columns: minmax(0, 1fr); }
-.session-detail-layout.is-stacked .session-endpoint { align-items: flex-start; text-align: left; }
-.session-detail-layout.is-stacked .session-endpoint > span { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
-.session-detail-layout.is-stacked .session-summary-heading { flex-wrap: wrap; }
-
 @media (prefers-reduced-motion: reduce) {
   .session-time-view .session-packet-card { transition: none; }
 }
@@ -132,10 +124,6 @@
 
 @media (max-width: 900px) {
   .session-time-view { padding: 12px; }
-  .session-detail-layout { flex-direction: column; }
-  .session-detail-layout > .arco-resizebox-split-pane { flex: none !important; width: 100%; }
-  .session-detail-layout > .arco-resizebox-split-trigger { display: none; }
-  .session-detail-layout > .second-pane { margin-top: 14px; }
   .session-timeline-list { max-height: 480px; }
   .session-endpoint-address { font-size: 13px; }
   .session-time-view .traffic-filter-bar { flex-wrap: wrap; }

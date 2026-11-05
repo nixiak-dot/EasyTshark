@@ -46,9 +46,10 @@ export default function SessionTimeGraphTab({ sessionId }) {
   const record = readSession(sessionId);
   const transport = record.trans_proto || '';
   const application = record.app_proto || '';
-  const stacked = layoutWidth > 0 && layoutWidth < timelineMinWidth + MIN_PACKET_DETAIL_WIDTH + 20;
-  const minSplitSize = layoutWidth && !stacked ? (timelineMinWidth + 10) / layoutWidth : 0.25;
-  const maxSplitSize = layoutWidth && !stacked ? 1 - (MIN_PACKET_DETAIL_WIDTH + 10) / layoutWidth : 0.75;
+  const minLayoutWidth = timelineMinWidth + MIN_PACKET_DETAIL_WIDTH + 20;
+  const splitWidth = layoutWidth ? Math.max(layoutWidth, minLayoutWidth) : 0;
+  const minSplitSize = splitWidth ? (timelineMinWidth + 10) / splitWidth : 0.25;
+  const maxSplitSize = splitWidth ? Math.max(minSplitSize, 1 - (MIN_PACKET_DETAIL_WIDTH + 10) / splitWidth) : 0.75;
   const clampSplitSize = (size) => Math.min(maxSplitSize, Math.max(minSplitSize, size));
   const effectiveSplitSize = clampSplitSize(splitSize);
 
@@ -115,8 +116,9 @@ export default function SessionTimeGraphTab({ sessionId }) {
       <TrafficFilterBar value={searchInput} appliedValue={filterExpression}
         onChange={setSearchInput} onSubmit={() => setFilterExpression(searchInput.trim())}
         onClear={() => { setSearchInput(''); setFilterExpression(''); }} />
-      <ResizeBox.Split ref={layoutRef} className={`session-detail-layout${stacked ? ' is-stacked' : ''}`}
-        style={{ '--packet-detail-min-width': `${MIN_PACKET_DETAIL_WIDTH}px` }}
+      <div className='session-detail-viewport'>
+      <ResizeBox.Split ref={layoutRef} className='session-detail-layout'
+        style={{ minWidth: minLayoutWidth, '--packet-detail-min-width': `${MIN_PACKET_DETAIL_WIDTH}px` }}
         size={effectiveSplitSize} min={minSplitSize} max={maxSplitSize}
         onMoving={(_, size) => setSplitSize(clampSplitSize(Number(size)))}
         trigger={(
@@ -214,6 +216,7 @@ export default function SessionTimeGraphTab({ sessionId }) {
             filterExpression={filterExpression} match={{ params: { type: 'detail', sessionId } }} />
         </Card>
       ]} />
+      </div>
     </div>
   );
 }
