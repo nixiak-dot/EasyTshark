@@ -53,7 +53,7 @@ export default function SessionAgent({ sessionId }) {
       if (modalRef.current) return;
       modalRef.current = Modal.confirm({
         title: '确认发送网络证据',
-        content: `将问题及 AI 按需获取的本会话端点、精简 info 和协议字段发送到 ${settings.baseUrl}（${settings.model}）。可能包含敏感信息，不发送完整载荷。取消不会发送，本次会话确认后无需重复确认。`,
+        content: `将问题及 AI 按需获取的本会话端点、精简 info、协议字段及必要的正文片段发送到 ${settings.baseUrl}（${settings.model}）。正文可能包含敏感业务信息，仅尽力脱敏；不会自动发送完整抓包或完整数据流。取消不会发送，本次会话确认后无需重复确认。`,
         okText: '同意并发送', cancelText: '暂不发送',
         onOk: () => { modalRef.current = null; setConsent(true); execute(text); },
         onCancel: () => { modalRef.current = null; },
@@ -101,7 +101,7 @@ export default function SessionAgent({ sessionId }) {
             <Button onClick={save} disabled={loading}>应用模型配置</Button>
             <small>兼容 Chat Completions 工具调用接口。配置自动保存，下次启动自动读取；API Key 明文保存在本机配置文件，不回显到页面，请勿分享该文件。</small>
           </div>}
-          <small>首次发送时确认数据发送目标；AI 仅按问题需要读取精简证据，不发送完整抓包载荷。</small>
+          <small>首次发送时确认数据发送目标；AI 按需读取精简证据和正文片段，可能包含敏感信息，不发送完整抓包。</small>
           {coverage && <small>本地快照：{coverage.loaded}/{coverage.total} 包{coverage.partial ? '，仅部分覆盖' : ''}。新对话可刷新证据。</small>}
         </div>
         <div className='session-agent-messages' role='log' aria-label='会话分析对话'>

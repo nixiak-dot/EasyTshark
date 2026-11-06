@@ -24,6 +24,7 @@ test('free-form questions trigger one-time confirmation without preset task butt
   expect(screen.queryByRole('button', { name: '分析网络过程' })).not.toBeInTheDocument();
   await ask();
   await screen.findByText('确认发送网络证据');
+  expect(screen.getByText(/正文可能包含敏感业务信息/)).toBeInTheDocument();
   expect(window.electronAPI.agentChat).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: '暂不发送' }));
   expect(window.electronAPI.agentChat).not.toHaveBeenCalled();

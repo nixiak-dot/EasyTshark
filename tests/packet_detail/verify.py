@@ -241,6 +241,19 @@ for version in (ssl.TLSVersion.TLSv1_2, ssl.TLSVersion.TLSv1_3):
             assert any(field.get('name') == 'http.request.method' and field.get('show') == 'GET' for field in fields)
             assert any(field.get('name') == 'http.response.code' and field.get('show') == '200' for field in fields)
             assert b'secure-body!' in result.stdout
+            agent_check = r"""
+const fs = require('node:fs');
+const { applicationEvidence, packetBody } = require(process.argv[1]);
+const document = JSON.parse(fs.readFileSync(0, 'utf8'));
+const packets = document.pdml.packet;
+const readable = packets.filter(packet => applicationEvidence(packet.proto).status === 'application_observed');
+if (!readable.length) throw new Error('No application evidence in decrypted PDML');
+if (!readable.some(packet => packetBody(packet.proto).text?.includes('secure-body!'))) {
+  throw new Error('Agent cannot read decrypted TLS response body');
+}
+"""
+            subprocess.run(['node', '-e', agent_check, str(repository / 'tshark-front/agent/evidence.cjs')],
+                           input=json.dumps(document).encode('utf-8'), check=True)
             summary = subprocess.check_output([arguments.tshark, '-r', str(tls_capture), '-T', 'fields',
                                                '-e', '_ws.col.Protocol', *options])
             assert b'HTTP' in summary

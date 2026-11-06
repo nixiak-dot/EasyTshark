@@ -82,6 +82,8 @@ npm run build
 npm run electron-build
 ```
 
+Closing the main window exits the packaged app, including detail windows, and terminates the backend process tree started by that instance. Development mode leaves manually started backends running.
+
 ## 运行结果
 
 启动后会生成或使用这些本地文件/目录：
